@@ -1,0 +1,30 @@
+type Motorcycle = 
+ record {
+   brand: text;
+   cylinderCapacity: nat;
+   description: text;
+   id: text;
+   images: vec text;
+   model: text;
+   price: nat;
+ };
+type FileReference = 
+ record {
+   hash: text;
+   path: text;
+ };
+service : {
+  addMotorcycle: (motorcycle: Motorcycle) -> ();
+  deleteMotorcycle: (id: text) -> ();
+  dropFileReference: (path: text) -> ();
+  filterByBrand: (brand: text) -> (vec Motorcycle) query;
+  filterByBrandAndCapacity: (brand: text, capacity: nat) ->
+   (vec Motorcycle) query;
+  filterByCylinderCapacity: (capacity: nat) -> (vec Motorcycle) query;
+  getAllMotorcycles: () -> (vec Motorcycle) query;
+  getFileReference: (path: text) -> (FileReference) query;
+  getMotorcycle: (id: text) -> (opt Motorcycle) query;
+  listFileReferences: () -> (vec FileReference) query;
+  registerFileReference: (path: text, hash: text) -> ();
+  updateMotorcycle: (id: text, updatedMotorcycle: Motorcycle) -> ();
+}

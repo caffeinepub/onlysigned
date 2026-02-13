@@ -8,10 +8,16 @@
     "authorization": "1.0.1",
     "stripe": "1.0.1",
     "http-outcalls": "1.1.1",
-    "user-approval": "v1.0.0",
-    "invite-links": "1.0.1"
+    "user-approval": "1.0.0",
+    "invite-links": "1.0.1",
+    "core-infrastructure": "1.0.2",
+    "shadcn-ui": "1.0.0",
+    "build-template-react": "1.0.0",
+    "initial-app": "1.0.0",
+    "github-export-icp-cli": "1.0.0"
   },
-  "aiCoreVersion": "0.12.3",
+  "aiCoreVersion": "0.19.6",
   "failedMigrationVersion": "0.12.3",
-  "motokoVersion": "0.16.3-caffeine-4"
+  "motokoVersion": "0.16.3-caffeine-4",
+  "tags": []
 }

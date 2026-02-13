@@ -82,6 +82,14 @@ export interface StripeConfiguration {
     allowedCountries: Array<string>;
     secretKey: string;
 }
+export interface FileReference {
+    path: string;
+    hash: string;
+    size: bigint;
+    contentType: string;
+    uploadedAt: bigint;
+    owner: Principal;
+}
 export enum ApprovalStatus {
     pending = "pending",
     approved = "approved",
@@ -120,4 +128,8 @@ export interface backendInterface {
     setStripeConfiguration(config: StripeConfiguration): Promise<void>;
     submitRSVP(name: string, attending: boolean, inviteCode: string): Promise<void>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
+    registerFileReference(path: string, hash: string): Promise<void>;
+    listFileReferences(): Promise<Array<FileReference>>;
+    getFileReference(path: string): Promise<FileReference | null>;
+    dropFileReference(path: string): Promise<void>;
 }

@@ -5,15 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { Shield, CheckCircle, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { UserProfile } from '../backend';
 
 export default function HomePage() {
   const { identity, login, clear, loginStatus } = useInternetIdentity();
-  const { data: userProfile, isLoading: profileLoading } = useGetCallerUserProfile();
+  const { data: userProfile, isLoading: profileLoading, isFetched } = useGetCallerUserProfile();
   const { mutateAsync: saveProfile, isPending: isSaving } = useSaveCallerUserProfile();
 
   const [displayName, setDisplayName] = useState('');
@@ -22,6 +21,13 @@ export default function HomePage() {
   const isAuthenticated = !!identity;
   const isLoggingIn = loginStatus === 'logging-in';
 
+  useEffect(() => {
+    if (userProfile) {
+      setDisplayName(userProfile.displayName || '');
+      setBio(userProfile.bio || '');
+    }
+  }, [userProfile]);
+
   const handleLogin = async () => {
     try {
       await login();
@@ -29,11 +35,6 @@ export default function HomePage() {
       console.error('Login error:', error);
       toast.error('Failed to login');
     }
-  };
-
-  const handleLogout = async () => {
-    await clear();
-    toast.success('Logged out successfully');
   };
 
   const handleSaveProfile = async () => {
@@ -63,128 +64,130 @@ export default function HomePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-4">OnlySigned Platform</h1>
-          <p className="text-muted-foreground">
-            Digital collectibles platform with blockchain authentication
-          </p>
-        </div>
+    <div className="max-w-6xl mx-auto">
+      <div className="text-center mb-12">
+        <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          OnlySigned
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          Ushering in a new era of trustless digital authenticity where fakes are impossible and every certificate is verifiable on-chain
+        </p>
+      </div>
 
-        <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Backend Implementation Required</AlertTitle>
-          <AlertDescription>
-            The backend is currently incomplete. Most features are not available. Only basic authentication and user profile management are functional.
-          </AlertDescription>
-        </Alert>
-
-        <Card className="mb-6">
+      {!isAuthenticated ? (
+        <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle>Authentication</CardTitle>
+            <CardTitle>Welcome to OnlySigned</CardTitle>
             <CardDescription>
-              Login with Internet Identity to access the platform
+              Login with Internet Identity to get started
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!isAuthenticated ? (
-              <Button onClick={handleLogin} disabled={isLoggingIn} size="lg" className="w-full">
-                {isLoggingIn ? 'Logging in...' : 'Login with Internet Identity'}
-              </Button>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium mb-2">Connected Principal:</p>
-                  <p className="text-xs font-mono break-all">
-                    {identity.getPrincipal().toString()}
-                  </p>
-                </div>
-                <Button onClick={handleLogout} variant="outline" className="w-full">
-                  Logout
-                </Button>
-              </div>
-            )}
+            <Button onClick={handleLogin} disabled={isLoggingIn} size="lg" className="w-full">
+              {isLoggingIn ? 'Logging in...' : 'Login with Internet Identity'}
+            </Button>
           </CardContent>
         </Card>
-
-        {isAuthenticated && (
+      ) : (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>User Profile</CardTitle>
-              <CardDescription>
-                {userProfile ? 'Update your profile information' : 'Create your profile'}
-              </CardDescription>
+              <CardTitle>Onboarding Status</CardTitle>
+              <CardDescription>Your account information and status</CardDescription>
             </CardHeader>
-            <CardContent>
-              {profileLoading ? (
-                <div className="text-center py-8">
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-2">Principal ID:</p>
+                <p className="text-xs font-mono break-all text-muted-foreground">
+                  {identity.getPrincipal().toString()}
+                </p>
+              </div>
+
+              {profileLoading && !isFetched ? (
+                <div className="text-center py-4">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                   <p className="text-sm text-muted-foreground mt-2">Loading profile...</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className={userProfile ? 'h-5 w-5 text-green-500' : 'h-5 w-5 text-muted-foreground'} />
+                    <span className="text-sm font-medium">
+                      Profile: {userProfile ? 'Created' : 'Not created'}
+                    </span>
+                  </div>
+
                   {userProfile && (
-                    <div className="p-4 bg-muted rounded-lg mb-4">
-                      <p className="text-sm font-medium">Current Profile:</p>
-                      <p className="text-lg font-bold">{userProfile.displayName}</p>
-                      {userProfile.bio && (
-                        <p className="text-sm text-muted-foreground mt-1">{userProfile.bio}</p>
+                    <>
+                      {userProfile.isAdmin && (
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-5 w-5 text-primary" />
+                          <span className="text-sm font-medium">Admin Status: Active</span>
+                        </div>
                       )}
-                      <div className="flex gap-2 mt-2">
-                        {userProfile.isAdmin && (
-                          <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100 px-2 py-1 rounded">
-                            Admin
-                          </span>
-                        )}
-                        {userProfile.isCreator && (
-                          <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 px-2 py-1 rounded">
-                            Creator
-                          </span>
-                        )}
-                        {userProfile.isVerified && (
-                          <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100 px-2 py-1 rounded">
-                            Verified
-                          </span>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm font-medium">User Number: {userProfile.userNumber.toString()}</span>
                       </div>
-                    </div>
+                    </>
                   )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="displayName">Display Name *</Label>
-                    <Input
-                      id="displayName"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder={userProfile?.displayName || 'Enter your display name'}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      placeholder={userProfile?.bio || 'Tell us about yourself'}
-                      rows={4}
-                    />
-                  </div>
-
-                  <Button
-                    onClick={handleSaveProfile}
-                    disabled={isSaving}
-                    className="w-full"
-                  >
-                    {isSaving ? 'Saving...' : userProfile ? 'Update Profile' : 'Create Profile'}
-                  </Button>
                 </div>
               )}
             </CardContent>
           </Card>
-        )}
-      </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{userProfile ? 'Update Profile' : 'Create Profile'}</CardTitle>
+              <CardDescription>
+                {userProfile ? 'Update your profile information' : 'Set up your OnlySigned profile'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {userProfile && (
+                  <div className="p-4 bg-muted rounded-lg mb-4">
+                    <p className="text-sm font-medium mb-1">Current Profile:</p>
+                    <p className="text-lg font-bold">{userProfile.displayName}</p>
+                    {userProfile.bio && (
+                      <p className="text-sm text-muted-foreground mt-1">{userProfile.bio}</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name *</Label>
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Enter your display name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell us about yourself"
+                    rows={4}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="w-full"
+                >
+                  {isSaving ? 'Saving...' : userProfile ? 'Update Profile' : 'Create Profile'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

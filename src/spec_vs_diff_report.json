@@ -1,0 +1,114 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-13T02:47:35.589Z",
+  "summary": "Diff implements a new TanStack Router-based app shell (Layout/Header/Footer), a PageScaffold component, updates Home page to an onboarding/status experience, and adds a new theme via OKLCH tokens. However, key requirements are not fully evidenced: backend Phase 1 endpoints/candid exposure can’t be confirmed from the truncated backend diff; top navigation is missing several required sections; many required placeholder pages are not shown as implemented; and required generated static brand image files + favicon configuration are not evidenced. Additionally, immutable frontend paths were modified (useActor.ts, main.tsx), which violates stated constraints.",
+  "missing_requirements": [
+    {
+      "id": "REQ-1",
+      "requirement": "Backend must expose and implement initializeAccessControl, getCallerUserProfile, saveCallerUserProfile, reclaimAdminAccess, getCallerUserRole, isCallerAdmin, isCallerApproved; methods must compile and be callable via generated frontend actor bindings; getCallerUserProfile must trap when caller has no user role; saveCallerUserProfile must assign stable userNumber and set isAdmin for first user.",
+      "reason": "backend/main.mo is truncated before showing the actual public method implementations and authorization behavior; the diff summary does not provide evidence that all required methods exist in candid, compile, or implement the specified trap/role logic.",
+      "evidence": [
+        "backend/main.mo (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "Header navigation must include links to the main sections (Home, Profile, Assets, Collections, Marketplace, Messages, Admin), with Admin visible only to admins.",
+      "reason": "Header navLinks shown include Home, Marketplace, User Explorer, Messages, Profile; evidence for Assets and Collections links is missing in the header navigation (Admin link gating is present).",
+      "evidence": [
+        "frontend/src/components/Header.tsx (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "requirement": "All listed placeholder pages (AdminDashboardPage, AssetDetailPage, CertificateValidationPage, CollectionDetailPage, CollectionsPage, ContactsPage, ContactInvitationsPage, MarketplacePage, MessagesPage, MyCollectiblesPage, MyCollectionPage, PitchDeckPage, PrivacyPolicyPage, ProfilePage, PublicProfilePage, SupportPage, UploadPage, UserExplorerPage, UsernameNFTsPage, WellKnownPage) must render non-empty UI with title/description and a consistent 'Coming in Phase X' placeholder where applicable.",
+      "reason": "Only a subset of the listed pages are shown implemented in the diff summary (e.g., AdminDashboardPage, AssetDetailPage, CertificateValidationPage, CollectionDetailPage, CollectionsPage, ContactsPage, ContactInvitationsPage, MarketplacePage, MessagesPage). The remaining listed pages are not evidenced as rendering non-empty UI (they may exist, but are not shown in provided diff summary).",
+      "evidence": [
+        "frontend/src/pages/AdminDashboardPage.tsx",
+        "frontend/src/pages/AssetDetailPage.tsx",
+        "frontend/src/pages/CertificateValidationPage.tsx",
+        "frontend/src/pages/CollectionDetailPage.tsx",
+        "frontend/src/pages/CollectionsPage.tsx",
+        "frontend/src/pages/ContactsPage.tsx",
+        "frontend/src/pages/ContactInvitationsPage.tsx",
+        "frontend/src/pages/MarketplacePage.tsx",
+        "frontend/src/pages/MessagesPage.tsx",
+        "frontend/src/router.tsx (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "requirement": "Add generated brand images as static assets under frontend/public/assets/generated/ with required filenames, render logo in header, and configure favicon to reference the generated favicon asset.",
+      "reason": "Header references the logo path, but the diff summary does not show the actual static asset files under frontend/public/assets/generated/ (binary/static files may be omitted), nor does it show any favicon configuration (e.g., index.html/head links).",
+      "evidence": [
+        "frontend/src/components/Header.tsx (truncated)"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Modified immutable frontend path: frontend/src/hooks/useActor.ts (including calling initializeAccessControl automatically when creating the actor).",
+      "reason": "BuildRequest explicitly forbids modifying immutable paths; this change is an unrequested modification and violates constraints.",
+      "evidence": [
+        "frontend/src/hooks/useActor.ts"
+      ]
+    },
+    {
+      "description": "Modified immutable frontend path: frontend/src/main.tsx to wrap InternetIdentityProvider and QueryClientProvider around App (while App also provides these providers).",
+      "reason": "BuildRequest explicitly forbids modifying frontend/src/main.tsx; additionally this introduces potential provider duplication beyond what was requested.",
+      "evidence": [
+        "frontend/src/main.tsx",
+        "frontend/src/App.tsx"
+      ]
+    },
+    {
+      "description": "Footer includes a 'Built with caffeine.ai' attribution link.",
+      "reason": "Not requested in the BuildRequest requirements; adds new branding/attribution content beyond specified Phase 1 scaffolding.",
+      "evidence": [
+        "frontend/src/components/Footer.tsx"
+      ]
+    }
+  ],
+  "confidence": 0.64,
+  "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "frontend-file-summaries.txt",
+    "frontend/index.html",
+    "frontend/src/App.tsx",
+    "frontend/src/components/Footer.tsx",
+    "frontend/src/components/Header.tsx",
+    "frontend/src/components/Layout.tsx",
+    "frontend/src/components/PageScaffold.tsx",
+    "frontend/src/hooks/useActor.ts",
+    "frontend/src/hooks/useInternetIdentity.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/index.css",
+    "frontend/src/main.tsx",
+    "frontend/src/pages/AdminDashboardPage.tsx",
+    "frontend/src/pages/AssetDetailPage.tsx",
+    "frontend/src/pages/CertificateValidationPage.tsx",
+    "frontend/src/pages/CollectionDetailPage.tsx",
+    "frontend/src/pages/CollectionsPage.tsx",
+    "frontend/src/pages/ContactInvitationsPage.tsx",
+    "frontend/src/pages/ContactsPage.tsx",
+    "frontend/src/pages/HomePage.tsx",
+    "frontend/src/pages/MarketplacePage.tsx",
+    "frontend/src/pages/MessagesPage.tsx",
+    "frontend/src/pages/MyCollectiblesPage.tsx",
+    "frontend/src/pages/MyCollectionPage.tsx",
+    "frontend/src/pages/PitchDeckPage.tsx",
+    "frontend/src/pages/PrivacyPolicyPage.tsx",
+    "frontend/src/pages/ProfilePage.tsx",
+    "frontend/src/pages/PublicProfilePage.tsx",
+    "frontend/src/pages/SupportPage.tsx",
+    "frontend/src/pages/UploadPage.tsx",
+    "frontend/src/pages/UserExplorerPage.tsx",
+    "frontend/src/pages/UsernameNFTsPage.tsx",
+    "frontend/src/pages/WellKnownPage.tsx",
+    "frontend/src/router.tsx",
+    "frontend/tailwind.config.js",
+    "project_state.json"
+  ]
+}

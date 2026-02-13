@@ -1,0 +1,155 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-frontend-replace-the-current-single-page-homepage-only-rendering-with-an-application-shell-that-includes-a-reusable-layout-header-top-navigation-and-footer-components-and-add-navigation-to-the-main-sections-home-profile-assets-collections-marketplace-messages-admin-admin-navigation-must-only-be-visible-when-the-logged-in-user-is-an-admin",
+      "featureTitle": "Frontend: Replace the current single-page HomePage-only rendering with an application shell that includes a reusable Layout, Header (top navigation), and Footer components, and add navigation to the main sections (Home, Profile, Assets, Collections, Marketplace, Messages, Admin). Admin navigation must only be visible when the logged-in user is an admin.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/components/Footer.tsx",
+        "frontend/src/components/Header.tsx",
+        "frontend/src/components/Layout.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/router.tsx"
+      ],
+      "components": [
+        "blob-storage@1.1.2",
+        "authorization@1.0.1",
+        "stripe@1.0.1",
+        "http-outcalls@1.1.1",
+        "user-approval@1.0.0",
+        "invite-links@1.0.1",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-frontend-implement-phase-1-page-scaffolding-for-the-existing-placeholder-routes-pages-admindashboardpage-assetdetailpage-certificatevalidationpage-collectiondetailpage-collectionspage-contactspage-contactinvitationspage-marketplacepage-messagespage-mycollectiblespage-mycollectionpage-pitchdeckpage-privacypolicypage-profilepage-publicprofilepage-supportpage-uploadpage-userexplorerpage-usernamenftspage-wellknownpage-each-page-must-render-a-clear-title-a-short-description-and-a-consistent-coming-in-phase-x-placeholder-where-applicable-while-keeping-the-app-functional-and-navigable",
+      "featureTitle": "Frontend: Implement Phase 1 page scaffolding for the existing placeholder routes/pages (AdminDashboardPage, AssetDetailPage, CertificateValidationPage, CollectionDetailPage, CollectionsPage, ContactsPage, ContactInvitationsPage, MarketplacePage, MessagesPage, MyCollectiblesPage, MyCollectionPage, PitchDeckPage, PrivacyPolicyPage, ProfilePage, PublicProfilePage, SupportPage, UploadPage, UserExplorerPage, UsernameNFTsPage, WellKnownPage). Each page must render a clear title, a short description, and a consistent “Coming in Phase X” placeholder where applicable, while keeping the app functional and navigable.",
+      "files": [
+        "frontend/src/components/PageScaffold.tsx",
+        "frontend/src/pages/AdminDashboardPage.tsx",
+        "frontend/src/pages/AssetDetailPage.tsx",
+        "frontend/src/pages/CertificateValidationPage.tsx",
+        "frontend/src/pages/CollectionDetailPage.tsx",
+        "frontend/src/pages/CollectionsPage.tsx",
+        "frontend/src/pages/ContactInvitationsPage.tsx",
+        "frontend/src/pages/ContactsPage.tsx",
+        "frontend/src/pages/MarketplacePage.tsx",
+        "frontend/src/pages/MessagesPage.tsx",
+        "frontend/src/pages/MyCollectiblesPage.tsx",
+        "frontend/src/pages/MyCollectionPage.tsx",
+        "frontend/src/pages/PitchDeckPage.tsx",
+        "frontend/src/pages/PrivacyPolicyPage.tsx",
+        "frontend/src/pages/ProfilePage.tsx",
+        "frontend/src/pages/PublicProfilePage.tsx",
+        "frontend/src/pages/SupportPage.tsx",
+        "frontend/src/pages/UploadPage.tsx",
+        "frontend/src/pages/UserExplorerPage.tsx",
+        "frontend/src/pages/UsernameNFTsPage.tsx",
+        "frontend/src/pages/WellKnownPage.tsx",
+        "frontend/src/router.tsx"
+      ],
+      "components": [
+        "blob-storage@1.1.2",
+        "authorization@1.0.1",
+        "stripe@1.0.1",
+        "http-outcalls@1.1.1",
+        "user-approval@1.0.0",
+        "invite-links@1.0.1",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-frontend-update-the-home-page-experience-to-match-phase-1-foundation-not-backend-incomplete-keep-internet-identity-login-logout-and-profile-creation-editing-but-remove-the-destructive-alert-that-says-the-backend-is-incomplete-add-an-onboarding-friendly-status-panel-that-shows-login-status-principal-when-logged-in-profile-status-exists-doesn-t-exist-and-admin-status-if-applicable",
+      "featureTitle": "Frontend: Update the Home page experience to match Phase 1 “Foundation” (not “backend incomplete”). Keep Internet Identity login/logout and profile creation/editing, but remove the destructive alert that says the backend is incomplete. Add an onboarding-friendly status panel that shows: login status, principal (when logged in), profile status (exists/doesn’t exist), and admin status (if applicable).",
+      "files": [
+        "frontend/src/pages/HomePage.tsx"
+      ],
+      "components": [
+        "blob-storage@1.1.2",
+        "authorization@1.0.1",
+        "stripe@1.0.1",
+        "http-outcalls@1.1.1",
+        "user-approval@1.0.0",
+        "invite-links@1.0.1",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-frontend-establish-a-coherent-distinctive-visual-theme-applied-across-the-app-shell-and-phase-1-pages-colors-typography-spacing-surface-styles-using-the-existing-tailwind-oklch-token-approach-do-not-use-a-blue-purple-primary-palette",
+      "featureTitle": "Frontend: Establish a coherent, distinctive visual theme applied across the app shell and Phase 1 pages (colors, typography, spacing, surface styles) using the existing Tailwind/OKLCH token approach. Do not use a blue/purple primary palette.",
+      "files": [
+        "frontend/src/components/Footer.tsx",
+        "frontend/src/components/Header.tsx",
+        "frontend/src/components/Layout.tsx",
+        "frontend/src/index.css"
+      ],
+      "components": [
+        "blob-storage@1.1.2",
+        "authorization@1.0.1",
+        "stripe@1.0.1",
+        "http-outcalls@1.1.1",
+        "user-approval@1.0.0",
+        "invite-links@1.0.1",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-frontend-add-the-generated-brand-images-as-static-assets-under-frontend-public-assets-generated-and-render-them-in-the-app-shell-logo-in-header-favicon-at-minimum-configured-for-the-app-do-not-serve-these-images-from-the-backend",
+      "featureTitle": "Frontend: Add the generated brand images as static assets under `frontend/public/assets/generated/` and render them in the app shell (logo in header; favicon at minimum configured for the app). Do not serve these images from the backend.",
+      "files": [
+        "frontend/index.html",
+        "frontend/src/components/Header.tsx"
+      ],
+      "components": [
+        "blob-storage@1.1.2",
+        "authorization@1.0.1",
+        "stripe@1.0.1",
+        "http-outcalls@1.1.1",
+        "user-approval@1.0.0",
+        "invite-links@1.0.1",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-6"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

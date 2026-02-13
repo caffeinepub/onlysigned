@@ -483,25 +483,27 @@ persistent actor {
   };
 
   public shared ({ caller }) func reclaimAdminAccess() : async () {
-    // SECURITY: Only existing admins can reassign admin role
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Debug.trap("Unauthorized: Only existing admins can reassign admin access");
-    };
-
-    // Allow admin to reassign to themselves (refresh their admin status)
-    AccessControl.assignRole(accessControlState, caller, caller, #admin);
-
+    // SECURITY: Only the first user (userNumber == 1) can reclaim admin access
+    // This is a recovery mechanism for the original admin
     switch (principalMap.get(userProfiles, caller)) {
-      case null Debug.trap("User profile not found");
+      case null Debug.trap("User profile not found. Please create a profile first.");
       case (?profile) {
+        if (profile.userNumber != 1) {
+          Debug.trap("Unauthorized: Only the original admin (first user) can reclaim admin access");
+        };
+
+        // Restore admin role in access control
+        AccessControl.assignRole(accessControlState, caller, caller, #admin);
+
+        // Update profile to reflect admin status
         let updatedProfile = {
           profile with isAdmin = true
         };
         userProfiles := principalMap.put(userProfiles, caller, updatedProfile);
+
+        Debug.trap("Admin access has been successfully reclaimed. Please click 'OK' to continue and refresh the page.");
       };
     };
-
-    Debug.trap("Admin access has been successfully reassigned to your account. Please click 'OK' to continue and refresh the page.");
   };
 
   public query ({ caller }) func getCallerUserRole() : async AccessControl.UserRole {
@@ -524,10 +526,8 @@ persistent actor {
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    // Allow viewing own profile or if admin
-    if (caller != user and not isCallerAdminUser(caller)) {
-      Debug.trap("Unauthorized: Can only view your own profile");
-    };
+    // Users can view their own profile or any other user's profile (public social platform)
+    // No special admin privilege needed for viewing profiles
     principalMap.get(userProfiles, user);
   };
 
@@ -615,3 +615,4 @@ persistent actor {
 
   include BlobStorage(registry);
 };
+

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 3,
+  "summary": "OnlySigned Digital Asset Signing Platform: build and deploy a trustless on-chain digital authenticity platform (ICRC-7 NFTs, collections, marketplace, profiles/social features, admin dashboard, wallet, privacy controls, domain verification, etc.). Current direction is to implement Phase 1 (foundation & architecture) from the approved roadmap.",
+  "architectural_notes": [
+    "Project name: OnlySigned Digital Asset Signing Platform.",
+    "Target stack: Motoko backend canister(s) + React/TypeScript/Tailwind frontend.",
+    "Auth via Internet Identity.",
+    "Signed copies implemented as ICRC-7 compliant NFTs; certificate verification uses on-chain/token metadata.",
+    "Phase-based roadmap; currently starting Phase 1 (foundation & architecture)."
+  ],
+  "known_issues": [
+    "Cannot access or redeploy historical builds (e.g., Version 60) from within chat; rollback requires external dashboard/version artifacts.",
+    "Build/deploy attempts reported errors (\"Oops, something went wrong with our AI\" / request couldn't be handled), causing deployment confusion (v61 deployed when v60 requested)."
+  ],
+  "isFixRequest": true,
+  "imageRequirements": "## Required Images\n- OnlySigned wordmark logo, minimalist, high-contrast, transparent background (onlysigned-logo.dim_512x128.png)\n- OnlySigned icon mark (simple monogram), transparent background (onlysigned-icon.dim_256x256.png)\n- Favicon icon, simplified mark, transparent background (favicon-onlysigned.dim_64x64.png)",
+  "existing_features": [
+    {
+      "id": "feature-frontend-replace-the-current-single-page-homepage-only-rendering-with-an-application-shell-that-includes-a-reusable-layout-header-top-navigation-and-footer-components-and-add-navigation-to-the-main-sections-home-profile-assets-collections-marketplace-messages-admin-admin-navigation-must-only-be-visible-when-the-logged-in-user-is-an-admin",
+      "title": "Frontend: Replace the current single-page HomePage-only rendering with an application shell that includes a reusable Layout, Header (top navigation), and Footer components, and add navigation to the main sections (Home, Profile, Assets, Collections, Marketplace, Messages, Admin). Admin navigation must only be visible when the logged-in user is an admin.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-implement-phase-1-page-scaffolding-for-the-existing-placeholder-routes-pages-admindashboardpage-assetdetailpage-certificatevalidationpage-collectiondetailpage-collectionspage-contactspage-contactinvitationspage-marketplacepage-messagespage-mycollectiblespage-mycollectionpage-pitchdeckpage-privacypolicypage-profilepage-publicprofilepage-supportpage-uploadpage-userexplorerpage-usernamenftspage-wellknownpage-each-page-must-render-a-clear-title-a-short-description-and-a-consistent-coming-in-phase-x-placeholder-where-applicable-while-keeping-the-app-functional-and-navigable",
+      "title": "Frontend: Implement Phase 1 page scaffolding for the existing placeholder routes/pages (AdminDashboardPage, AssetDetailPage, CertificateValidationPage, CollectionDetailPage, CollectionsPage, ContactsPage, ContactInvitationsPage, MarketplacePage, MessagesPage, MyCollectiblesPage, MyCollectionPage, PitchDeckPage, PrivacyPolicyPage, ProfilePage, PublicProfilePage, SupportPage, UploadPage, UserExplorerPage, UsernameNFTsPage, WellKnownPage). Each page must render a clear title, a short description, and a consistent “Coming in Phase X” placeholder where applicable, while keeping the app functional and navigable.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-update-the-home-page-experience-to-match-phase-1-foundation-not-backend-incomplete-keep-internet-identity-login-logout-and-profile-creation-editing-but-remove-the-destructive-alert-that-says-the-backend-is-incomplete-add-an-onboarding-friendly-status-panel-that-shows-login-status-principal-when-logged-in-profile-status-exists-doesn-t-exist-and-admin-status-if-applicable",
+      "title": "Frontend: Update the Home page experience to match Phase 1 “Foundation” (not “backend incomplete”). Keep Internet Identity login/logout and profile creation/editing, but remove the destructive alert that says the backend is incomplete. Add an onboarding-friendly status panel that shows: login status, principal (when logged in), profile status (exists/doesn’t exist), and admin status (if applicable).",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-establish-a-coherent-distinctive-visual-theme-applied-across-the-app-shell-and-phase-1-pages-colors-typography-spacing-surface-styles-using-the-existing-tailwind-oklch-token-approach-do-not-use-a-blue-purple-primary-palette",
+      "title": "Frontend: Establish a coherent, distinctive visual theme applied across the app shell and Phase 1 pages (colors, typography, spacing, surface styles) using the existing Tailwind/OKLCH token approach. Do not use a blue/purple primary palette.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-frontend-add-the-generated-brand-images-as-static-assets-under-frontend-public-assets-generated-and-render-them-in-the-app-shell-logo-in-header-favicon-at-minimum-configured-for-the-app-do-not-serve-these-images-from-the-backend",
+      "title": "Frontend: Add the generated brand images as static assets under `frontend/public/assets/generated/` and render them in the app shell (logo in header; favicon at minimum configured for the app). Do not serve these images from the backend.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Implement Phase 1 — Foundation & Architecture for OnlySigned (core data models, Motoko backend scaffolding, auth, React/TS/Tailwind setup, API wiring)",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Restore/rollback production code to match Version 60 exactly (create new prod build equivalent to v60, addressing missing/removed code in v61+)",
+      "reqIds": [],
+      "status": "blocked"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Backend: Ensure Phase 1 foundation endpoints are implemented and usable from the frontend, specifically: access control bootstrap (initializeAccessControl), authentication-gated profile read/write (getCallerUserProfile, saveCallerUserProfile), admin recovery (reclaimAdminAccess), and role/admin checks (getCallerUserRole, isCallerAdmin, isCallerApproved). These methods must compile and be callable via the generated frontend actor bindings.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "OnlySigned Digital Asset Signing Platform",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

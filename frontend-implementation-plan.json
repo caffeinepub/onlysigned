@@ -1,0 +1,255 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "OnlySigned Phase 1 Frontend Foundation & Navigation Shell",
+  "requirements": [
+    {
+      "id": "REQ-2",
+      "summary": "Introduce an app shell with Layout/Header/Footer and client-side navigation, including admin-only navigation visibility.",
+      "acceptanceCriteria": [
+        "The app renders a consistent header/footer on all pages.",
+        "Navigation links switch between pages without a full page reload (client-side navigation).",
+        "The Admin link is hidden for non-admin users and visible for admin users.",
+        "The previously empty component files `frontend/src/components/Layout.tsx`, `Header.tsx`, and `Footer.tsx` are implemented (without modifying any immutablePaths)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Implement a reusable Layout that renders Header, a main content outlet/slot, and Footer with consistent spacing/surfaces across the app. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/Header.tsx",
+          "operation": "modify",
+          "description": "Implement a top navigation header with links to Home, Profile, Assets, Collections, Marketplace, Messages, and Admin; render Admin link only when the current user is admin. Include login/logout controls using Internet Identity context and clear React Query cache on logout per authorization component guidance. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/Footer.tsx",
+          "operation": "modify",
+          "description": "Implement a footer with basic site links (e.g., Privacy, Support) and Phase 1 foundation messaging; ensure it renders on all pages. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add React Query hook(s) to support role/admin checks needed by the Header (e.g., query for isCallerAdmin and/or caller role) using the generated actor bindings; ensure safe behavior when logged out. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/router.tsx",
+          "operation": "create",
+          "description": "Add a client-side router configuration that maps required pages to paths and composes them under the Layout to enable navigation without full reloads."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Replace HomePage-only rendering with the router-driven app shell so all routes render within Layout while preserving existing React Query and Internet Identity providers."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Implement Phase 1 scaffolding UI for all placeholder pages and ensure they are routable and navigable without runtime errors.",
+      "acceptanceCriteria": [
+        "All listed placeholder page modules render non-empty UI (no blank screens).",
+        "Navigating to each page shows a title and description in English.",
+        "No runtime errors occur when visiting any page while logged out or logged in."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/PageScaffold.tsx",
+          "operation": "create",
+          "description": "Create a small reusable page scaffold component that renders a page title, short description, and a consistent “Coming in Phase X” placeholder block where applicable."
+        },
+        {
+          "path": "frontend/src/pages/AdminDashboardPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/AssetDetailPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/CertificateValidationPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/CollectionDetailPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/CollectionsPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/ContactsPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/ContactInvitationsPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/MarketplacePage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/MessagesPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/MyCollectiblesPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/MyCollectionPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/PitchDeckPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/PrivacyPolicyPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/ProfilePage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out and avoid throwing when userProfile is null."
+        },
+        {
+          "path": "frontend/src/pages/PublicProfilePage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/SupportPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/UploadPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/UserExplorerPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/UsernameNFTsPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/pages/WellKnownPage.tsx",
+          "operation": "modify",
+          "description": "Implement non-empty scaffolding UI with a clear title/description and Phase placeholder text as applicable; keep content safe when logged out."
+        },
+        {
+          "path": "frontend/src/router.tsx",
+          "operation": "modify",
+          "description": "Register routes for all scaffolded pages so each can be visited via client-side navigation; ensure the primary nav destinations match the app header links and no page is orphaned."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Update Home page for Phase 1 foundation: remove backend-incomplete destructive alert and add an onboarding status panel while preserving II login and profile create/edit via existing hooks.",
+      "acceptanceCriteria": [
+        "Home page no longer displays the destructive alert text: “Backend Implementation Required”.",
+        "When logged out, the Home page shows a clear login call-to-action.",
+        "When logged in, the Home page shows the principal string and whether a profile exists.",
+        "When a profile exists, the UI indicates whether the user is admin based on returned profile data.",
+        "Profile create/update continues to work using existing React Query hooks (`useGetCallerUserProfile`, `useSaveCallerUserProfile`)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/HomePage.tsx",
+          "operation": "modify",
+          "description": "Remove the destructive “Backend Implementation Required” alert and replace it with an onboarding-friendly status panel (login status, principal when logged in, profile exists/doesn’t exist, admin status when applicable) while preserving Internet Identity login/logout and profile create/update via existing hooks. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Apply a coherent, distinctive non-blue/purple visual theme across the app shell and Phase 1 pages using existing Tailwind OKLCH tokens.",
+      "acceptanceCriteria": [
+        "App has a consistent, intentional look across header, footer, and pages (not default/unstyled).",
+        "Primary actions, cards, and navigation states have consistent styling.",
+        "The chosen theme does not rely on blue/purple as the primary brand colors."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Update OKLCH design tokens (especially --primary/--ring/--accent and related sidebar/chart tokens) to a distinctive palette that is not blue/purple, and add any minimal global base styles needed for consistent surfaces/typography."
+        },
+        {
+          "path": "frontend/src/components/Header.tsx",
+          "operation": "modify",
+          "description": "Apply the updated theme consistently to navigation states (active/hover), header surfaces, and primary actions using existing Tailwind classes and token-based colors."
+        },
+        {
+          "path": "frontend/src/components/Footer.tsx",
+          "operation": "modify",
+          "description": "Apply the updated theme consistently to footer surfaces, typography, and link states using existing Tailwind classes and token-based colors."
+        },
+        {
+          "path": "frontend/src/components/Layout.tsx",
+          "operation": "modify",
+          "description": "Ensure the Layout applies consistent page spacing and background/surface styling aligned with the updated token theme."
+        }
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "summary": "Add generated brand images as static assets and wire them into the UI (header logo + favicon).",
+      "acceptanceCriteria": [
+        "Files exist under `frontend/public/assets/generated/` matching the imageRequirements filenames.",
+        "Header displays the logo image asset.",
+        "The app includes a favicon referencing the generated favicon asset."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/public/assets/generated/onlysigned-logo.dim_512x128.png",
+          "operation": "create",
+          "description": "Add the generated static brand wordmark logo asset at this exact path for header display."
+        },
+        {
+          "path": "frontend/public/assets/generated/onlysigned-icon.dim_256x256.png",
+          "operation": "create",
+          "description": "Add the generated static icon/monogram asset at this exact path for potential UI usage."
+        },
+        {
+          "path": "frontend/public/assets/generated/favicon-onlysigned.dim_64x64.png",
+          "operation": "create",
+          "description": "Add the generated static favicon asset at this exact path for HTML head configuration."
+        },
+        {
+          "path": "frontend/src/components/Header.tsx",
+          "operation": "modify",
+          "description": "Render the header logo using the static asset at `frontend/public/assets/generated/onlysigned-logo.dim_512x128.png` and ensure it is visible across pages."
+        },
+        {
+          "path": "frontend/index.html",
+          "operation": "modify",
+          "description": "Update the document title to OnlySigned and configure favicon references to `frontend/public/assets/generated/favicon-onlysigned.dim_64x64.png` (served as a static frontend asset, not via backend)."
+        }
+      ]
+    }
+  ]
+}

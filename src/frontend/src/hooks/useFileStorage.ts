@@ -11,11 +11,13 @@
  * delegates to the scaffold.
  */
 
+import type { Identity } from "@icp-sdk/core/agent";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import type { AppConfig } from "../config";
 import { loadConfig } from "../config";
 import { useActor } from "./useActor";
+import { useInternetIdentity } from "./useInternetIdentity";
 
 const GATEWAY_VERSION = "v1";
 
@@ -84,16 +86,19 @@ export function useFileUrl(path: string): {
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
 /**
- * Build a StorageClient using the actor's own authenticated agent.
+ * Build a StorageClient using an HttpAgent constructed directly from the
+ * authenticated Identity — NOT via Actor.agentOf() which silently falls back
+ * to anonymous.
  *
- * IMPORTANT: `actor` is captured from the ref at call-time (not render-time),
- * so it always reflects the freshest value. We re-validate it here so the raw
- * "Cannot read properties of undefined (reading 'config')" JS error can never
- * bubble up from StorageClient.
+ * Using the identity directly is the only reliable way to ensure the
+ * StorageClient's _caffeineStorageCreateCertificate call is signed by the
+ * real user, which blob.caffeine.ai requires to return a valid certificate.
+ * An anonymous agent always produces a 403 Forbidden.
  */
 async function buildStorageClient(
   actor: ReturnType<typeof useActor>["actor"],
   config: AppConfig,
+  identity: Identity,
 ) {
   // Hard guard: actor must be non-null at the moment we build the client.
   if (!actor) {
@@ -102,48 +107,34 @@ async function buildStorageClient(
     );
   }
 
-  const { StorageClient } = await import("../blob-storage/StorageClient");
-  const { Actor, HttpAgent } = await import("@icp-sdk/core/agent");
-
-  // Extract the authenticated agent from the actor so the StorageClient's
-  // certificate call (_caffeineStorageCreateCertificate) is signed with the
-  // user's identity. Using a new anonymous HttpAgent here causes a 403 on
-  // blob.caffeine.ai because the certificate cannot be validated.
-  let extractedAgent: ReturnType<typeof Actor.agentOf> | undefined;
-  try {
-    extractedAgent = Actor.agentOf(
-      actor as unknown as Parameters<typeof Actor.agentOf>[0],
-    );
-  } catch {
-    extractedAgent = undefined;
-  }
-
-  // StorageClient expects HttpAgent from @dfinity/agent; both HttpAgent
-  // implementations share the same wire protocol so casting via unknown is safe.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  type DfinityHttpAgent = ConstructorParameters<typeof StorageClient>[5];
-  let agent: DfinityHttpAgent;
-
-  if (extractedAgent) {
-    agent = extractedAgent as unknown as DfinityHttpAgent;
-  } else {
-    // Fallback: create a plain agent. This path should not normally be reached
-    // for authenticated uploads — if it is, the 403 guard in StorageClient
-    // will reject the request with a clear error.
-    const fallback = new HttpAgent({ host: config.backend_host });
-    if (config.backend_host?.includes("localhost")) {
-      await fallback.fetchRootKey().catch(() => {});
+  // Validate the identity is real and not anonymous before creating the agent.
+  const principalText = (() => {
+    try {
+      return identity.getPrincipal().toString();
+    } catch {
+      return "";
     }
-    agent = fallback as unknown as DfinityHttpAgent;
+  })();
+  if (!principalText || ANONYMOUS_PRINCIPALS.has(principalText)) {
+    throw new Error(
+      "Your session is anonymous. Please log out, log back in, and try again.",
+    );
   }
 
-  // Final null/undefined guard on agent before handing it to StorageClient,
-  // so the raw "Cannot read properties of undefined (reading 'config')" error
-  // can never surface from the constructor or getCertificate().
-  if (!agent) {
-    throw new Error(
-      "Could not obtain an authenticated agent. Please log in and try again.",
-    );
+  const { StorageClient } = await import("../blob-storage/StorageClient");
+  const { HttpAgent } = await import("@icp-sdk/core/agent");
+
+  // Create an authenticated HttpAgent using the real Identity directly.
+  // This is the ONLY reliable approach — Actor.agentOf() silently returns
+  // undefined in many SDK configurations, causing a fallback to anonymous.
+  const agent = await HttpAgent.create({
+    identity,
+    host: config.backend_host,
+  });
+
+  // Fetch root key only on local dev networks
+  if (config.backend_host?.includes("localhost")) {
+    await agent.fetchRootKey().catch(() => {});
   }
 
   return new StorageClient(
@@ -160,9 +151,9 @@ async function buildStorageClient(
  * Upload a file to blob storage.
  * Drop-in replacement for `useFileUpload` from blob-storage/FileStorage.ts.
  *
- * Uses a ref to track the latest actor value so that the async uploadFile
- * closure always reads the freshest actor at the moment of the call, not the
- * stale value captured at render time.
+ * Uses a ref to track the latest actor and identity values so that the async
+ * uploadFile closure always reads the freshest values at the moment of the
+ * call, not the stale values captured at render time.
  */
 export function useFileUpload(): {
   uploadFile: (
@@ -173,9 +164,13 @@ export function useFileUpload(): {
   isUploading: boolean;
 } {
   const { actor } = useActor();
-  // Always holds the latest actor — reads inside the async closure are live.
+  const { identity } = useInternetIdentity();
+
+  // Always hold the latest actor and identity — reads inside the async closure are live.
   const actorRef = useRef(actor);
   actorRef.current = actor;
+  const identityRef = useRef(identity);
+  identityRef.current = identity;
 
   const [isUploading, setIsUploading] = useState(false);
 
@@ -199,9 +194,10 @@ export function useFileUpload(): {
         );
       }
 
-      // Step 2: re-read actor from ref AFTER config resolves so we have the
-      // freshest value, not the one captured at render/closure creation time.
+      // Step 2: re-read actor and identity from refs AFTER config resolves so
+      // we have the freshest values, not the ones captured at render/closure time.
       const currentActor = actorRef.current;
+      const currentIdentity = identityRef.current;
 
       // Step 3: validate the actor is real and authenticated
       if (!currentActor) {
@@ -210,42 +206,33 @@ export function useFileUpload(): {
         );
       }
 
-      // Extra belt-and-suspenders: check the principal inside the actor
-      // to catch any edge-case anonymous identity transitions.
-      try {
-        const { Actor: _Actor } = await import("@icp-sdk/core/agent");
-        const agentCheck = _Actor.agentOf(
-          currentActor as unknown as Parameters<typeof _Actor.agentOf>[0],
+      // Step 4: validate the identity is available and not anonymous
+      if (!currentIdentity) {
+        throw new Error(
+          "Your session identity is not available. Please log in and try again.",
         );
-        if (agentCheck) {
-          const agentWithPrincipal = agentCheck as unknown as {
-            getPrincipal?: () => { toString(): string };
-          };
-          const p = agentWithPrincipal.getPrincipal?.();
-          if (p) {
-            const pText = typeof p.toString === "function" ? p.toString() : "";
-            if (pText && ANONYMOUS_PRINCIPALS.has(pText)) {
-              throw new Error(
-                "Your session shows an anonymous identity. Please log out, log back in, and try again.",
-              );
-            }
-          }
+      }
+      const principalText = (() => {
+        try {
+          return currentIdentity.getPrincipal().toString();
+        } catch {
+          return "";
         }
-      } catch (principalCheckErr) {
-        // Only re-throw if this is our explicit anonymous-principal error
-        if (
-          principalCheckErr instanceof Error &&
-          principalCheckErr.message.includes("anonymous identity")
-        ) {
-          throw principalCheckErr;
-        }
-        // Otherwise it's a harmless SDK introspection error — continue
+      })();
+      if (!principalText || ANONYMOUS_PRINCIPALS.has(principalText)) {
+        throw new Error(
+          "Your session shows an anonymous identity. Please log out, log back in, and try again.",
+        );
       }
 
-      // Step 4: build the storage client and upload
+      // Step 5: build the storage client with the authenticated identity and upload
       let client: Awaited<ReturnType<typeof buildStorageClient>>;
       try {
-        client = await buildStorageClient(currentActor, config);
+        client = await buildStorageClient(
+          currentActor,
+          config,
+          currentIdentity,
+        );
       } catch (buildErr) {
         const msg =
           buildErr instanceof Error

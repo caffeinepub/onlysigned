@@ -31,6 +31,7 @@ import type { Collection, FileRef } from "../backend-types";
 import CertificateDisplay from "../components/CertificateDisplay";
 import ConnectWall from "../components/ConnectWall";
 import PageScaffold from "../components/PageScaffold";
+import { useAuth } from "../hooks/useAuth";
 import { useFileUpload } from "../hooks/useFileStorage";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useIsAdmin, useMyProfile } from "../hooks/useProfile";
@@ -59,6 +60,8 @@ export default function UploadPage() {
 
 function UploadContent() {
   const navigate = useNavigate();
+  const { identity, isInitializing } = useInternetIdentity();
+  const { isAuthenticated, principal } = useAuth();
   const { data: profile } = useMyProfile();
   const isAdmin = useIsAdmin();
   const { data: collectionsRaw } = useMyCollections();
@@ -70,6 +73,16 @@ function UploadContent() {
   const followerCount = Number(profile?.followerCount ?? 0);
   const isEligible = isAdmin || (isCertificateIssuer && followerCount >= 500);
   const collections = (collectionsRaw ?? []) as Collection[];
+
+  // Anonymous principal text — used to detect the race condition
+  const ANONYMOUS_PRINCIPAL = "2vxsx-fae";
+
+  // Auth readiness: identity exists, auth is settled, and principal is real (not anonymous)
+  const principalText = principal?.toString() ?? "";
+  const isRealPrincipal =
+    principalText.length > 0 && principalText !== ANONYMOUS_PRINCIPAL;
+  const authReady =
+    !!identity && !isInitializing && isAuthenticated && isRealPrincipal;
 
   // Form state
   const [files, setFiles] = useState<File[]>([]);
@@ -132,6 +145,20 @@ function UploadContent() {
   };
 
   const handleSubmit = async () => {
+    if (!authReady) {
+      toast.error(
+        "Please wait for authentication to complete before creating an asset.",
+      );
+      return;
+    }
+
+    // Explicit anonymous-principal guard — final safety net before any backend call
+    const currentPrincipal = principal?.toString() ?? "";
+    if (!currentPrincipal || currentPrincipal === ANONYMOUS_PRINCIPAL) {
+      toast.error("Please log in before uploading an asset.");
+      return;
+    }
+
     if (!validate()) return;
     const royaltyVal = Number.parseFloat(royaltyPercent || "0");
     const priceVal = Number.parseFloat(basePrice || "0");
@@ -230,6 +257,8 @@ function UploadContent() {
             errors={errors}
             onSubmit={handleSubmit}
             isPending={createAsset.isPending || isUploading}
+            isAuthReady={authReady}
+            isLoggedIn={isAuthenticated}
             uploadProgress={uploadProgress}
           />
         ) : (
@@ -273,6 +302,9 @@ interface AssetFormProps {
   errors: { name?: string; royalty?: string };
   onSubmit: () => void;
   isPending: boolean;
+  isAuthReady: boolean;
+  /** True when identity is present but not yet confirmed as a real (non-anonymous) principal */
+  isLoggedIn: boolean;
   uploadProgress: Record<string, number>;
 }
 
@@ -297,8 +329,11 @@ function AssetForm({
   errors,
   onSubmit,
   isPending,
+  isAuthReady,
+  isLoggedIn,
   uploadProgress,
 }: AssetFormProps) {
+  const isDisabled = isPending || !isAuthReady;
   return (
     <Card className="bg-card border-border" data-ocid="upload-asset-form">
       <CardHeader className="pb-3">
@@ -492,9 +527,21 @@ function AssetForm({
           </Label>
         </div>
 
+        {/* Auth loading warning */}
+        {!isAuthReady && (
+          <div className="flex items-center gap-2 rounded-lg bg-muted/30 border border-border/50 px-3 py-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" />
+            <span>
+              {!isLoggedIn
+                ? "Please log in to create assets."
+                : "Waiting for authentication…"}
+            </span>
+          </div>
+        )}
+
         <Button
           onClick={onSubmit}
-          disabled={isPending}
+          disabled={isDisabled}
           className="w-full bg-accent text-accent-foreground hover:bg-accent/80 min-h-[44px] sm:min-h-[40px]"
           data-ocid="create-asset-btn"
         >
@@ -504,6 +551,13 @@ function AssetForm({
               {Object.keys(uploadProgress).length > 0
                 ? "Uploading files…"
                 : "Creating…"}
+            </span>
+          ) : !isLoggedIn ? (
+            "Login required"
+          ) : !isAuthReady ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Authenticating…
             </span>
           ) : (
             "Create Asset"

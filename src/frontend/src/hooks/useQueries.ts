@@ -28,6 +28,7 @@ import type {
   WalletBalance,
 } from "../backend-types";
 import { useActor } from "./useActor";
+import { useInternetIdentity as useInternetIdentityHook } from "./useInternetIdentity";
 
 // ─── User / Profile ──────────────────────────────────────────────────────────
 
@@ -699,8 +700,12 @@ export function useDeleteCollection() {
   });
 }
 
+/** Text of the IC anonymous principal — used to guard against unauthenticated calls. */
+const ANONYMOUS_PRINCIPAL_TEXT = "2vxsx-fae";
+
 export function useCreateAsset() {
-  const { actor } = useActor();
+  const { actor, isAuthenticated } = useActor();
+  const { identity } = useInternetIdentityHook();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
@@ -712,6 +717,18 @@ export function useCreateAsset() {
       fileRefs: FileRef[];
     }) => {
       if (!actor) throw new Error("Actor not available");
+      if (!isAuthenticated)
+        throw new Error("Not authenticated. Please log in first.");
+
+      // Explicit principal validation — never send the anonymous principal to
+      // the backend. This is the final safety net before the backend call.
+      const principalText = identity?.getPrincipal()?.toString() ?? "";
+      if (!principalText || principalText === ANONYMOUS_PRINCIPAL_TEXT) {
+        throw new Error(
+          "Not authenticated. Please log in before creating an asset.",
+        );
+      }
+
       const result = await actor.createAsset(
         data.name,
         data.description ?? null,

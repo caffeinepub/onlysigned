@@ -494,7 +494,7 @@ export class StorageClient {
     }
     const args = IDL.encode([IDL.Text], [hash]);
     const result = await this.agent.call(this.backendCanisterId, {
-      methodName: "_caffeineStorageCreateCertificate",
+      methodName: "_immutableObjectStorageCreateCertificate",
       arg: args,
     });
     const respone = result.response.body;
@@ -551,11 +551,18 @@ export class StorageClient {
       httpHeaders,
       onProgress,
     );
-    // Validate hash format before storing in backend
+    // Validate hash format
     validateHashFormat(hashString, `putFile '${hashString}' hash storage`);
 
-    await this.actor.registerFileReference(path, hashString as never);
-    const url = await this.getDirectURL(path);
+    // Build the direct URL from the hash — no actor call needed.
+    // Registration of the file reference (path → hash mapping) is the
+    // responsibility of the caller (e.g. UploadPage) via createAsset/FileRef.
+    const url =
+      `${this.storageGatewayClient.getStorageGatewayUrl()}/${GATEWAY_VERSION}/blob/` +
+      `?blob_hash=${encodeURIComponent(hashString)}` +
+      `&owner_id=${encodeURIComponent(this.backendCanisterId)}` +
+      `&project_id=${encodeURIComponent(this.projectId)}`;
+
     return { path, hash: hashString, url };
   }
 

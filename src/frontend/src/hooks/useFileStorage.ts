@@ -1,23 +1,21 @@
 /**
  * Type-safe blob-storage hooks.
  *
- * The platform scaffold files (FileStorage.ts / StorageClient.ts) previously
- * imported from "../backend" (relative), which caused TypeScript 5.9 to parse
- * backend.ts and fail on the `with` reserved keyword (TS1390).
+ * ROOT CAUSE OF 403: Our local StorageClient.ts was calling
+ * _caffeineStorageCreateCertificate but the Caffeine platform backend exposes
+ * _immutableObjectStorageCreateCertificate. That has been fixed in StorageClient.ts.
  *
- * That relative import has been patched in both scaffold files to use
- * "../backend-types" instead. This module re-implements useFileUrl without
- * touching the scaffold at all, and provides a useFileUpload hook that
- * delegates to the scaffold.
+ * The authenticated agent is extracted from the actor via Actor.agentOf().
+ * useActor() guarantees actor is non-null only when identity is real and
+ * authenticated, so the agent inside is always authenticated.
  */
 
-import type { Identity } from "@icp-sdk/core/agent";
+import { Actor, type Agent, type HttpAgent } from "@dfinity/agent";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import type { AppConfig } from "../config";
 import { loadConfig } from "../config";
 import { useActor } from "./useActor";
-import { useInternetIdentity } from "./useInternetIdentity";
 
 const GATEWAY_VERSION = "v1";
 
@@ -33,32 +31,41 @@ async function resolveFileUrl(
   if (!actor) throw new Error("Backend is not available");
   if (!path) throw new Error("Path must not be empty");
 
-  const [fileReference, config] = await Promise.all([
-    actor.getFileReference(path),
-    loadConfig(),
-  ]);
+  const config = await loadConfig();
 
-  if (!fileReference) throw new Error(`File not found: ${path}`);
-
-  const { hash } = fileReference;
-  if (!hash || hash.trim() === "") {
-    throw new Error(
-      `File reference for "${path}" has no hash — the upload may have failed`,
+  // path may be a hash directly (sha256:...) or a storage path
+  // If it looks like a hash, use it directly; otherwise try to get file reference
+  if (path.startsWith("sha256:")) {
+    const { storage_gateway_url, backend_canister_id, project_id } = config;
+    return (
+      `${storage_gateway_url}/${GATEWAY_VERSION}/blob/` +
+      `?blob_hash=${encodeURIComponent(path)}` +
+      `&owner_id=${encodeURIComponent(backend_canister_id)}` +
+      `&project_id=${encodeURIComponent(project_id)}`
     );
   }
 
-  const { storage_gateway_url, backend_canister_id, project_id } = config;
-  return (
-    `${storage_gateway_url}/${GATEWAY_VERSION}/blob/` +
-    `?blob_hash=${encodeURIComponent(hash)}` +
-    `&owner_id=${encodeURIComponent(backend_canister_id)}` +
-    `&project_id=${encodeURIComponent(project_id)}`
-  );
+  // Try the object-storage extension's getFileReference
+  try {
+    const fileReference = await actor.getFileReference(path);
+    if (fileReference?.hash) {
+      const { storage_gateway_url, backend_canister_id, project_id } = config;
+      return (
+        `${storage_gateway_url}/${GATEWAY_VERSION}/blob/` +
+        `?blob_hash=${encodeURIComponent(fileReference.hash)}` +
+        `&owner_id=${encodeURIComponent(backend_canister_id)}` +
+        `&project_id=${encodeURIComponent(project_id)}`
+      );
+    }
+  } catch {
+    // getFileReference may not be available if extension is not configured
+  }
+
+  throw new Error(`Could not resolve URL for file: ${path}`);
 }
 
 /**
  * Resolve a blob-storage path to a direct gateway URL.
- * Drop-in replacement for `useFileUrl` from blob-storage/FileStorage.ts.
  */
 export function useFileUrl(path: string): {
   data: string | undefined;
@@ -86,74 +93,93 @@ export function useFileUrl(path: string): {
 // ─── Upload ───────────────────────────────────────────────────────────────────
 
 /**
- * Build a StorageClient using an HttpAgent constructed directly from the
- * authenticated Identity — NOT via Actor.agentOf() which silently falls back
- * to anonymous.
+ * Extract the authenticated HttpAgent from the actor.
  *
- * Using the identity directly is the only reliable way to ensure the
- * StorageClient's _caffeineStorageCreateCertificate call is signed by the
- * real user, which blob.caffeine.ai requires to return a valid certificate.
- * An anonymous agent always produces a 403 Forbidden.
+ * Actor.agentOf(actor) returns the HttpAgent that was used to create the actor.
+ * Since useActor() only exposes an actor when identityIsReal === true (three-layer
+ * check), this agent is ALWAYS authenticated — it was built from the user's
+ * real Internet Identity by createActorWithConfig.
+ *
+ * This is the ONLY reliable approach. Creating a new HttpAgent from the identity
+ * directly risks using a different agent instance than the one the IC SDK uses for
+ * certificate validation, potentially producing mismatched signatures.
  */
-async function buildStorageClient(
-  actor: ReturnType<typeof useActor>["actor"],
-  config: AppConfig,
-  identity: Identity,
-) {
-  // Hard guard: actor must be non-null at the moment we build the client.
-  if (!actor) {
+function extractAuthenticatedAgent(
+  actor: NonNullable<ReturnType<typeof useActor>["actor"]>,
+): Agent {
+  const agent = Actor.agentOf(
+    actor as unknown as Parameters<typeof Actor.agentOf>[0],
+  );
+
+  if (!agent) {
     throw new Error(
-      "Please log in before uploading. Your session may have expired — refresh and try again.",
+      "Could not extract authenticated agent from actor. " +
+        "Please log out and log back in, then try again.",
     );
   }
 
-  // Validate the identity is real and not anonymous before creating the agent.
-  const principalText = (() => {
-    try {
-      return identity.getPrincipal().toString();
-    } catch {
-      return "";
+  return agent;
+}
+
+/**
+ * Build a StorageClient using the authenticated agent extracted from the actor.
+ *
+ * The StorageClient now calls _immutableObjectStorageCreateCertificate which is
+ * what the Caffeine platform backend actually exposes — fixing the 403 Forbidden.
+ */
+async function buildStorageClient(
+  actor: NonNullable<ReturnType<typeof useActor>["actor"]>,
+  config: AppConfig,
+) {
+  const agent = extractAuthenticatedAgent(actor);
+
+  // Belt-and-suspenders: validate the agent has a real (non-anonymous) identity
+  try {
+    const identity = (
+      agent as unknown as {
+        _identity?: {
+          getPrincipal?: () => {
+            toString: () => string;
+            isAnonymous?: () => boolean;
+          };
+        };
+      }
+    )._identity;
+    if (identity?.getPrincipal) {
+      const principal = identity.getPrincipal();
+      const text = principal.toString();
+      if (ANONYMOUS_PRINCIPALS.has(text) || principal.isAnonymous?.()) {
+        throw new Error(
+          "Agent identity is anonymous. Please log out and log back in.",
+        );
+      }
     }
-  })();
-  if (!principalText || ANONYMOUS_PRINCIPALS.has(principalText)) {
-    throw new Error(
-      "Your session is anonymous. Please log out, log back in, and try again.",
-    );
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("anonymous")) throw e;
+    // Identity check API not available — useActor's three-layer guard already validated
   }
 
   const { StorageClient } = await import("../blob-storage/StorageClient");
-  const { HttpAgent } = await import("@icp-sdk/core/agent");
-
-  // Create an authenticated HttpAgent using the real Identity directly.
-  // This is the ONLY reliable approach — Actor.agentOf() silently returns
-  // undefined in many SDK configurations, causing a fallback to anonymous.
-  const agent = await HttpAgent.create({
-    identity,
-    host: config.backend_host,
-  });
-
-  // Fetch root key only on local dev networks
-  if (config.backend_host?.includes("localhost")) {
-    await agent.fetchRootKey().catch(() => {});
-  }
-
   return new StorageClient(
     actor,
     config.bucket_name,
     config.storage_gateway_url,
     config.backend_canister_id,
     config.project_id,
-    agent,
+    agent as HttpAgent,
   );
 }
 
 /**
  * Upload a file to blob storage.
- * Drop-in replacement for `useFileUpload` from blob-storage/FileStorage.ts.
  *
- * Uses a ref to track the latest actor and identity values so that the async
- * uploadFile closure always reads the freshest values at the moment of the
- * call, not the stale values captured at render time.
+ * Returns { path, hash, url } where:
+ *   - path: the storage path used (e.g. "assets/1234567890-file.mp3")
+ *   - hash: the sha256 content hash (e.g. "sha256:abc...")
+ *   - url: direct download URL
+ *
+ * The caller (UploadPage) is responsible for registering the file reference
+ * in the backend via createAsset({ fileRefs: [{ fileId: path, ... }] }).
  */
 export function useFileUpload(): {
   uploadFile: (
@@ -164,13 +190,10 @@ export function useFileUpload(): {
   isUploading: boolean;
 } {
   const { actor } = useActor();
-  const { identity } = useInternetIdentity();
 
-  // Always hold the latest actor and identity — reads inside the async closure are live.
+  // Always hold the latest actor — reads inside the async closure are live.
   const actorRef = useRef(actor);
   actorRef.current = actor;
-  const identityRef = useRef(identity);
-  identityRef.current = identity;
 
   const [isUploading, setIsUploading] = useState(false);
 
@@ -181,7 +204,7 @@ export function useFileUpload(): {
   ): Promise<{ path: string; hash: string; url: string }> => {
     setIsUploading(true);
     try {
-      // Step 1: resolve config (async — may take a moment for /env.json fallback)
+      // Step 1: resolve config
       const config = await loadConfig();
 
       if (
@@ -194,45 +217,19 @@ export function useFileUpload(): {
         );
       }
 
-      // Step 2: re-read actor and identity from refs AFTER config resolves so
-      // we have the freshest values, not the ones captured at render/closure time.
+      // Step 2: re-read actor from ref for the freshest value
       const currentActor = actorRef.current;
-      const currentIdentity = identityRef.current;
 
-      // Step 3: validate the actor is real and authenticated
       if (!currentActor) {
         throw new Error(
           "You must be logged in to upload assets. Please log in and try again.",
         );
       }
 
-      // Step 4: validate the identity is available and not anonymous
-      if (!currentIdentity) {
-        throw new Error(
-          "Your session identity is not available. Please log in and try again.",
-        );
-      }
-      const principalText = (() => {
-        try {
-          return currentIdentity.getPrincipal().toString();
-        } catch {
-          return "";
-        }
-      })();
-      if (!principalText || ANONYMOUS_PRINCIPALS.has(principalText)) {
-        throw new Error(
-          "Your session shows an anonymous identity. Please log out, log back in, and try again.",
-        );
-      }
-
-      // Step 5: build the storage client with the authenticated identity and upload
+      // Step 3: build the storage client with the authenticated agent from the actor
       let client: Awaited<ReturnType<typeof buildStorageClient>>;
       try {
-        client = await buildStorageClient(
-          currentActor,
-          config,
-          currentIdentity,
-        );
+        client = await buildStorageClient(currentActor, config);
       } catch (buildErr) {
         const msg =
           buildErr instanceof Error
@@ -241,6 +238,9 @@ export function useFileUpload(): {
         throw new Error(msg);
       }
 
+      // Step 4: upload the file — StorageClient.putFile now calls
+      // _immutableObjectStorageCreateCertificate (correct method) and returns
+      // { path, hash, url } without any actor calls for registration.
       return await client.putFile(path, file, onProgress);
     } finally {
       setIsUploading(false);

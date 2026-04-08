@@ -60,25 +60,36 @@ export function useActor(): {
   const result = _useActor(createActor as any);
   const { identity, isInitializing } = useInternetIdentity();
 
-  // isAuthenticated is true only when ALL of the following hold:
-  //   1. identity object is present
-  //   2. internet identity is not still initialising
-  //   3. the actor query is fully settled (not mid-refresh / mid-recreate)
-  //   4. the principal is a real, non-anonymous, non-empty principal
-  //
-  // Checking !result.isFetching is critical: when the identity changes,
-  // the actor is recreated asynchronously. Until the new actor is ready
-  // isFetching === true, so isAuthenticated stays false — preventing any
-  // write mutation from running with the old anonymous actor.
+  // Determine whether the current identity is a real authenticated user.
+  // "2vxsx-fae" is the canonical anonymous principal.
+  // "aaaaa-aa"  is what you get from an empty / zero principal.
+  // Both must be rejected.
   const principalText = identity?.getPrincipal()?.toString() ?? "";
-  const isAuthenticated =
-    !!identity &&
-    !isInitializing &&
-    !result.isFetching &&
-    isValidPrincipal(principalText);
+  const identityIsReal =
+    !!identity && !isInitializing && isValidPrincipal(principalText);
+
+  // isAuthenticated requires identity to be real AND the actor query to have
+  // finished recreating (isFetching === false) so the actor in the query
+  // cache corresponds to the authenticated identity, not an old one.
+  const isAuthenticated = identityIsReal && !result.isFetching;
+
+  // CRITICAL: The underlying _useActor hook creates an anonymous actor when
+  // no identity is present (see core-infrastructure useActor.js lines 18-21).
+  // We must NEVER expose that anonymous actor to callers — mutations check
+  // `if (!actor)` as their primary guard. If we pass through the anonymous
+  // actor, that guard is bypassed and the backend rejects with
+  // "Principal aaaaa-aa does not have a valid checksum".
+  //
+  // Rule: actor is non-null ONLY when the identity is real AND the actor
+  // query has finished building with that identity (not mid-recreate).
+  const actor: Backend | null =
+    identityIsReal && !result.isFetching
+      ? (result.actor as Backend | null)
+      : null;
 
   return {
-    ...(result as { actor: Backend | null; isFetching: boolean }),
+    actor,
+    isFetching: result.isFetching || (!!identity && !identityIsReal),
     isAuthenticated,
   };
 }

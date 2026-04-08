@@ -287,6 +287,10 @@ actor {
     collectionId : ?Text,
     fileRefs     : [Assets.FileRef],
   ) : async { #ok : Text; #err : Text } {
+    // Backend guard: reject anonymous / invalid principals before any other logic
+    if (caller.isAnonymous()) return #err("Authentication required. Please log in before creating an asset.");
+    if (caller.toText() == "aaaaa-aa") return #err("Invalid principal. Please reconnect your Internet Identity.");
+    if (caller.toText() == "") return #err("Empty principal. Please reconnect your Internet Identity.");
     requireUser(caller);
     let result = Assets.createAsset(assetsState, callerCtx(caller), name, description, basePrice, royaltyBps, collectionId, fileRefs);
     switch result {

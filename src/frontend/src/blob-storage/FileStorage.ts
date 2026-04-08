@@ -1,4 +1,4 @@
-import { HttpAgent } from "@icp-sdk/core/agent";
+import { Actor, type Agent, HttpAgent } from "@icp-sdk/core/agent";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { FileReference } from "../backend-types";
@@ -6,12 +6,22 @@ import { loadConfig } from "../config";
 import { useActor } from "../hooks/useActor";
 import { StorageClient } from "./StorageClient";
 
-const getHttpAgent = async () => {
+/**
+ * Extracts the authenticated HttpAgent from the backend actor if available,
+ * otherwise falls back to creating a new anonymous agent.
+ * Using the actor's agent ensures the certificate call in StorageClient uses
+ * the user's identity and avoids 503 auth failures on blob.caffeine.ai.
+ */
+const getAgentForActor = async (actor: unknown): Promise<Agent> => {
+  if (actor) {
+    const extracted = Actor.agentOf(
+      actor as Parameters<typeof Actor.agentOf>[0],
+    );
+    if (extracted) return extracted;
+  }
+  // Fallback: create a plain agent (for anonymous / unauthenticated cases)
   const config = await loadConfig();
-
-  const agent = new HttpAgent({
-    host: config.backend_host,
-  });
+  const agent = new HttpAgent({ host: config.backend_host });
   if (config.backend_host?.includes("localhost")) {
     await agent.fetchRootKey().catch((err) => {
       console.warn(
@@ -52,7 +62,7 @@ export const useFileUrl = (path: string) => {
       envConfig.storage_gateway_url,
       envConfig.backend_canister_id,
       envConfig.project_id,
-      await getHttpAgent(),
+      await getAgentForActor(actor),
     );
     const url = await storageClient.getDirectURL(path);
     return url;
@@ -92,7 +102,7 @@ export const useFileUpload = () => {
       envConfig.storage_gateway_url,
       envConfig.backend_canister_id,
       envConfig.project_id,
-      await getHttpAgent(),
+      await getAgentForActor(actor),
     );
 
     setIsUploading(true);

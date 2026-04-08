@@ -25,12 +25,13 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Collection, FileRef } from "../backend-types";
 import CertificateDisplay from "../components/CertificateDisplay";
 import ConnectWall from "../components/ConnectWall";
 import PageScaffold from "../components/PageScaffold";
+import { useActor } from "../hooks/useActor";
 import { useAuth } from "../hooks/useAuth";
 import { useFileUpload } from "../hooks/useFileStorage";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -58,10 +59,19 @@ export default function UploadPage() {
 
 // ─── Upload Content ───────────────────────────────────────────────────────────
 
+/**
+ * All known string representations of invalid / anonymous principals.
+ * Matches the set in useActor.ts and useQueries.ts.
+ */
+const INVALID_PRINCIPALS_SET = new Set(["2vxsx-fae", "aaaaa-aa"]);
+
 function UploadContent() {
   const navigate = useNavigate();
   const { identity, isInitializing } = useInternetIdentity();
   const { isAuthenticated, principal } = useAuth();
+  // isFetching tells us the actor is being recreated (e.g. just after login).
+  // We must wait for it to finish before allowing canister calls.
+  const { isFetching: actorFetching } = useActor();
   const { data: profile } = useMyProfile();
   const isAdmin = useIsAdmin();
   const { data: collectionsRaw } = useMyCollections();
@@ -74,15 +84,57 @@ function UploadContent() {
   const isEligible = isAdmin || (isCertificateIssuer && followerCount >= 500);
   const collections = (collectionsRaw ?? []) as Collection[];
 
-  // Anonymous principal text — used to detect the race condition
-  const ANONYMOUS_PRINCIPAL = "2vxsx-fae";
-
-  // Auth readiness: identity exists, auth is settled, and principal is real (not anonymous)
+  // Auth readiness: identity exists, auth is fully settled, actor is not
+  // mid-recreate, and the principal is a real non-anonymous identity.
+  // This is the authoritative check before any write to the backend.
   const principalText = principal?.toString() ?? "";
-  const isRealPrincipal =
-    principalText.length > 0 && principalText !== ANONYMOUS_PRINCIPAL;
+  const isValidPrincipal =
+    principalText.length > 0 && !INVALID_PRINCIPALS_SET.has(principalText);
   const authReady =
-    !!identity && !isInitializing && isAuthenticated && isRealPrincipal;
+    !!identity &&
+    !isInitializing &&
+    !actorFetching &&
+    isAuthenticated &&
+    isValidPrincipal;
+
+  /**
+   * authSettled: extra 500 ms hold-off after the first valid auth state is
+   * observed. This guards against the race where isFetching briefly returns
+   * to false between two actor recreations (e.g. the anonymous actor settling
+   * before the authenticated actor is built). The submit button stays disabled
+   * until this flag is true AND authReady is true simultaneously.
+   */
+  const [authSettled, setAuthSettled] = useState(false);
+  const authSettledTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Clear any pending timer when conditions change
+    if (authSettledTimer.current !== null) {
+      clearTimeout(authSettledTimer.current);
+      authSettledTimer.current = null;
+    }
+
+    if (authReady) {
+      // Start the 500 ms hold-off; only mark settled if authReady is still
+      // true when the timer fires (prevents accepting a fleeting valid state).
+      authSettledTimer.current = setTimeout(() => {
+        setAuthSettled(true);
+      }, 500);
+    } else {
+      // Auth not ready — reset settled flag immediately
+      setAuthSettled(false);
+    }
+
+    return () => {
+      if (authSettledTimer.current !== null) {
+        clearTimeout(authSettledTimer.current);
+      }
+    };
+  }, [authReady]);
+
+  // Full auth gate: requires both the instantaneous check AND the 500 ms
+  // hold-off to have passed. This is what guards the submit button.
+  const authFullyReady = authReady && authSettled;
 
   // Form state
   const [files, setFiles] = useState<File[]>([]);
@@ -145,16 +197,18 @@ function UploadContent() {
   };
 
   const handleSubmit = async () => {
-    if (!authReady) {
+    if (!authFullyReady) {
       toast.error(
         "Please wait for authentication to complete before creating an asset.",
       );
       return;
     }
 
-    // Explicit anonymous-principal guard — final safety net before any backend call
+    // Explicit principal guard — final safety net before any backend call.
+    // Rejects the anonymous principal ("2vxsx-fae") and the all-zero/empty
+    // principal ("aaaaa-aa") which can appear during identity transitions.
     const currentPrincipal = principal?.toString() ?? "";
-    if (!currentPrincipal || currentPrincipal === ANONYMOUS_PRINCIPAL) {
+    if (!currentPrincipal || INVALID_PRINCIPALS_SET.has(currentPrincipal)) {
       toast.error("Please log in before uploading an asset.");
       return;
     }
@@ -257,7 +311,7 @@ function UploadContent() {
             errors={errors}
             onSubmit={handleSubmit}
             isPending={createAsset.isPending || isUploading}
-            isAuthReady={authReady}
+            isAuthReady={authFullyReady}
             isLoggedIn={isAuthenticated}
             uploadProgress={uploadProgress}
           />

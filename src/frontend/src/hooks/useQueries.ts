@@ -700,11 +700,73 @@ export function useDeleteCollection() {
   });
 }
 
-/** Text of the IC anonymous principal — used to guard against unauthenticated calls. */
-const ANONYMOUS_PRINCIPAL_TEXT = "2vxsx-fae";
+/**
+ * All known string representations of invalid / anonymous principals.
+ * Must be kept in sync with the set in useActor.ts.
+ */
+const INVALID_PRINCIPAL_TEXTS = new Set(["2vxsx-fae", "aaaaa-aa"]);
+
+/** Returns true when the principal text is a real authenticated identity. */
+function isValidPrincipalText(text: string): boolean {
+  return text.length > 0 && !INVALID_PRINCIPAL_TEXTS.has(text);
+}
+
+/**
+ * Waits up to `maxMs` in `intervalMs` increments, re-checking whether the
+ * actor's own identity has settled to a non-anonymous principal.
+ * Returns the settled principal text, or throws after timeout.
+ *
+ * This is the deepest defence against the "aaaaa-aa" principal race: even if
+ * the React render cycle has marked isFetching===false, the agent inside the
+ * actor may still be mid-transition. Polling directly against the actor's agent
+ * principal closes that final timing window.
+ */
+async function waitForSettledPrincipal(
+  actor: { getCallerPrincipal?: () => Promise<string> } | null,
+  identity:
+    | { getPrincipal: () => { toString: () => string } }
+    | null
+    | undefined,
+  maxMs = 3000,
+  intervalMs = 100,
+): Promise<string> {
+  const deadline = Date.now() + maxMs;
+  while (Date.now() < deadline) {
+    // Prefer reading from the actor's own perspective if available,
+    // fall back to the identity object we have in closure.
+    let principalText: string;
+    if (
+      actor &&
+      typeof (actor as Record<string, unknown>).getCallerPrincipal ===
+        "function"
+    ) {
+      try {
+        principalText = await (
+          actor as { getCallerPrincipal: () => Promise<string> }
+        ).getCallerPrincipal();
+      } catch {
+        principalText = identity?.getPrincipal()?.toString() ?? "";
+      }
+    } else {
+      principalText = identity?.getPrincipal()?.toString() ?? "";
+    }
+
+    if (isValidPrincipalText(principalText)) {
+      return principalText;
+    }
+    // Not settled yet — wait one interval and retry
+    await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
+  }
+  // Final synchronous read as last resort
+  const finalText = identity?.getPrincipal()?.toString() ?? "";
+  if (isValidPrincipalText(finalText)) return finalText;
+  throw new Error(
+    "Cannot create asset: your authentication has not settled. Please wait a moment and try again.",
+  );
+}
 
 export function useCreateAsset() {
-  const { actor, isAuthenticated } = useActor();
+  const { actor, isAuthenticated, isFetching } = useActor();
   const { identity } = useInternetIdentityHook();
   const qc = useQueryClient();
   return useMutation({
@@ -716,18 +778,37 @@ export function useCreateAsset() {
       collectionId?: string;
       fileRefs: FileRef[];
     }) => {
-      if (!actor) throw new Error("Actor not available");
+      // Guard 1: actor must exist and be settled (not mid-recreate after login)
+      if (!actor) throw new Error("Actor not available. Please try again.");
+      if (isFetching)
+        throw new Error("Authentication is still loading. Please wait.");
+
+      // Guard 2: isAuthenticated already checks identity, isInitializing,
+      //          isFetching, and principal validity — this is the primary gate.
       if (!isAuthenticated)
         throw new Error("Not authenticated. Please log in first.");
 
-      // Explicit principal validation — never send the anonymous principal to
-      // the backend. This is the final safety net before the backend call.
-      const principalText = identity?.getPrincipal()?.toString() ?? "";
-      if (!principalText || principalText === ANONYMOUS_PRINCIPAL_TEXT) {
+      // Guard 3: Explicit principal string check using closure value — catches
+      //          edge cases where isAuthenticated is true but principal is stale.
+      const closurePrincipalText = identity?.getPrincipal()?.toString() ?? "";
+      if (!isValidPrincipalText(closurePrincipalText)) {
         throw new Error(
-          "Not authenticated. Please log in before creating an asset.",
+          "Your authentication has not fully settled yet. Please wait a moment and try again.",
         );
       }
+
+      // Guard 4: Live polling check — re-reads the principal at mutation time,
+      //          NOT from the closed-over render snapshot. This is the decisive
+      //          fix for the "aaaaa-aa" race: the mutation fires with the actor
+      //          that existed at render, but the agent inside that actor may have
+      //          been swapped. We wait up to 3 s for a valid principal before
+      //          proceeding. A 200 ms head-start delay lets any in-flight agent
+      //          recreation settle before the first poll.
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
+      await waitForSettledPrincipal(
+        actor as Parameters<typeof waitForSettledPrincipal>[0],
+        identity,
+      );
 
       const result = await actor.createAsset(
         data.name,

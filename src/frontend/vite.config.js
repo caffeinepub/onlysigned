@@ -34,12 +34,23 @@ function fixBackendReservedKeywords() {
   };
 }
 
+// Inject the canister ID under both names that config.ts detectCanisterId()
+// checks for. The Caffeine deployment pipeline sets CANISTER_ID_BACKEND in
+// process.env; vite-plugin-environment already exposes it as
+// import.meta.env.CANISTER_ID_BACKEND, but config.ts looks for the VITE_
+// prefixed names, so we explicitly define both here.
+const BACKEND_CANISTER_ID = process.env.CANISTER_ID_BACKEND || "";
+
 export default defineConfig({
   logLevel: "error",
   build: {
     emptyOutDir: true,
     sourcemap: false,
     minify: false,
+  },
+  define: {
+    "import.meta.env.VITE_BACKEND_CANISTER_ID": JSON.stringify(BACKEND_CANISTER_ID),
+    "import.meta.env.VITE_CANISTER_ID_BACKEND": JSON.stringify(BACKEND_CANISTER_ID),
   },
   css: {
     postcss: "./postcss.config.js",

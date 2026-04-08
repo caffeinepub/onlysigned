@@ -29,7 +29,6 @@ import type {
   WalletBalance,
 } from "../backend-types";
 import { useActor } from "./useActor";
-import { useInternetIdentity as useInternetIdentityHook } from "./useInternetIdentity";
 
 // ─── User / Profile ──────────────────────────────────────────────────────────
 
@@ -701,39 +700,28 @@ export function useDeleteCollection() {
   });
 }
 
-/**
- * All known string representations of invalid / anonymous principals.
- * Must be kept in sync with the set in useActor.ts.
- *
- * "2vxsx-fae" — IC SDK canonical anonymous principal
- * "aaaaa-aa"  — empty/zero principal from Principal.fromText("") or
- *               Principal.fromUint8Array(new Uint8Array(0))
- */
-const INVALID_PRINCIPAL_TEXTS = new Set(["2vxsx-fae", "aaaaa-aa"]);
-
-/** Returns true when the principal text is a real authenticated identity. */
-function isRealPrincipalText(text: string): boolean {
-  return text.length > 0 && !INVALID_PRINCIPAL_TEXTS.has(text);
-}
-
 export function useCreateAsset() {
-  const { actor, isAuthenticated, isFetching } = useActor();
-  const { identity } = useInternetIdentityHook();
+  /**
+   * useActor() is the ONLY source of truth for the actor reference.
+   * It already enforces a three-layer anonymous principal check and only
+   * returns a non-null actor when:
+   *   1. identity exists and isInitializing === false
+   *   2. identity.getPrincipal().isAnonymous() === false
+   *   3. principal.toString() is not in the ANONYMOUS_PRINCIPALS set
+   *   4. isFetching === false (actor finished rebuilding after login)
+   *
+   * We store actor in a ref so mutationFn always reads the LATEST value at
+   * the moment the mutation fires — not the stale closure from render time.
+   * Because useActor() already handles all anonymous-principal guards, we do
+   * NOT need a separate identity ref or additional checks here.
+   */
+  const { actor, isAuthenticated } = useActor();
   const qc = useQueryClient();
 
-  /**
-   * Store actor and identity in refs so mutationFn always reads the LATEST
-   * values at call time — React Query mutations capture closure values at
-   * render time, so without refs a stale anonymous actor could slip through.
-   */
   const actorRef = useRef(actor);
-  const identityRef = useRef(identity);
   const isAuthRef = useRef(isAuthenticated);
-  const isFetchingRef = useRef(isFetching);
   actorRef.current = actor;
-  identityRef.current = identity;
   isAuthRef.current = isAuthenticated;
-  isFetchingRef.current = isFetching;
 
   return useMutation({
     mutationFn: async (data: {
@@ -744,63 +732,17 @@ export function useCreateAsset() {
       collectionId?: string;
       fileRefs: FileRef[];
     }) => {
-      // ── Read freshest values from refs, never from closure snapshots ──────
+      // Read the freshest actor and auth state at mutation-fire time, not
+      // from the stale closure captured at hook-render time.
       const currentActor = actorRef.current;
-      const currentIdentity = identityRef.current;
       const currentIsAuth = isAuthRef.current;
-      const currentIsFetching = isFetchingRef.current;
 
-      // ── CHECK 1: actor must be non-null ────────────────────────────────────
-      // useActor() only returns a non-null actor when the identity has been
-      // confirmed as real AND the actor query has finished rebuilding.
-      // A null actor here means we are still anonymous or mid-transition.
-      if (!currentActor) {
+      // actor is null when identity is anonymous or actor is mid-recreate.
+      // This is the single authoritative gate — no extra identity checks needed.
+      if (!currentActor || !currentIsAuth) {
         throw new Error("Please log in before creating an asset.");
       }
 
-      // ── CHECK 2: actor must not be mid-recreate ────────────────────────────
-      if (currentIsFetching) {
-        throw new Error("Connecting to wallet… please wait a moment.");
-      }
-
-      // ── CHECK 3: isAuthenticated — the composite gate ─────────────────────
-      // This flag is true only when identity is real, initialisation is done,
-      // isFetching is false, and principal text is valid. It combines every
-      // earlier guard into one authoritative boolean.
-      if (!currentIsAuth) {
-        throw new Error("Please log in before creating an asset.");
-      }
-
-      // ── CHECK 4: direct principal validation on the identity object ────────
-      // Belt-and-suspenders: verify the principal one final time using both
-      // isAnonymous() (IC SDK canonical) and the known-bad text set.
-      // We do NOT await or poll here — this is intentionally synchronous so
-      // there is no window for a race condition to slip an anonymous principal
-      // through between checks.
-      if (!currentIdentity) {
-        throw new Error("Identity not available. Please log in first.");
-      }
-
-      const principal = currentIdentity.getPrincipal();
-
-      // isAnonymous() is the authoritative IC SDK check
-      let isAnon = false;
-      try {
-        isAnon = principal.isAnonymous();
-      } catch {
-        // older SDK build without isAnonymous() — fall through to text check
-      }
-      if (isAnon) {
-        throw new Error("Please log in before creating an asset.");
-      }
-
-      // String check catches "aaaaa-aa" and any other edge-case forms
-      const principalText = principal.toString();
-      if (!isRealPrincipalText(principalText)) {
-        throw new Error("Please log in before creating an asset.");
-      }
-
-      // ── All checks passed — call the backend ──────────────────────────────
       const result = await currentActor.createAsset(
         data.name,
         data.description ?? null,

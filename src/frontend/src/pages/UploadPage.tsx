@@ -186,6 +186,15 @@ function UploadContent() {
       return;
     }
 
+    // Fresh actor check at submission time — actor may have gone null since
+    // the form rendered (e.g. identity refresh in the background).
+    if (!actor) {
+      toast.error(
+        "Your session is not ready yet. Please wait a moment and try again.",
+      );
+      return;
+    }
+
     if (!validate()) return;
     const royaltyVal = Number.parseFloat(royaltyPercent || "0");
     const priceVal = Number.parseFloat(basePrice || "0");

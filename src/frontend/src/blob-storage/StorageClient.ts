@@ -484,6 +484,14 @@ export class StorageClient {
   }
 
   private async getCertificate(hash: string): Promise<Uint8Array> {
+    // Guard: if agent is somehow undefined/null (e.g. built with a failed actor
+    // extraction), surface a clear error instead of the raw JS TypeError
+    // "Cannot read properties of undefined (reading 'config')".
+    if (!this.agent) {
+      throw new Error(
+        "Storage client has no authenticated agent. Please log in and try again.",
+      );
+    }
     const args = IDL.encode([IDL.Text], [hash]);
     const result = await this.agent.call(this.backendCanisterId, {
       methodName: "_caffeineStorageCreateCertificate",

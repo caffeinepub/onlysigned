@@ -1,42 +1,94 @@
 /**
  * Canister ID detection with multiple fallback strategies.
- * Priority order: VITE_BACKEND_CANISTER_ID → VITE_CANISTER_ID_BACKEND → window.ic
+ * Priority order:
+ *   1. VITE_BACKEND_CANISTER_ID (injected at build time)
+ *   2. VITE_CANISTER_ID_BACKEND (injected at build time)
+ *   3. window.ic injected by the IC gateway
+ *   4. /env.json deployed to dist/ at build time (runtime fallback)
  */
 
-function detectCanisterId(): string {
-  // 1. Vite env vars (set at build time)
+/** Returns true if the value is a real canister ID, not empty or "undefined". */
+function isValidId(value: string | undefined): value is string {
+  return !!value && value.length > 0 && value !== "undefined";
+}
+
+export async function detectCanisterId(): Promise<string> {
+  // 1. Vite env vars (injected at build time via vite.config.js define)
   const viteBackend = import.meta.env.VITE_BACKEND_CANISTER_ID as string | undefined;
-  if (viteBackend && viteBackend.length > 0) return viteBackend;
+  if (isValidId(viteBackend)) return viteBackend;
 
   const viteCanister = import.meta.env.VITE_CANISTER_ID_BACKEND as string | undefined;
-  if (viteCanister && viteCanister.length > 0) return viteCanister;
+  if (isValidId(viteCanister)) return viteCanister;
 
-  // 2. window.ic injected by the IC agent
+  // 2. window.ic injected by the IC boundary node / agent
   try {
     const win = window as unknown as Record<string, unknown>;
     const ic = win["ic"] as Record<string, unknown> | undefined;
     if (ic) {
       const canister = ic["BACKEND_CANISTER_ID"] as string | undefined;
-      if (canister) return canister;
+      if (isValidId(canister)) return canister;
       const canisters = ic["canisters"] as Record<string, unknown> | undefined;
       if (canisters) {
         const backend = canisters["backend"] as { canister_id?: string } | undefined;
-        if (backend?.canister_id) return backend.canister_id;
+        if (isValidId(backend?.canister_id)) return backend!.canister_id!;
       }
     }
   } catch {
     // ignore
   }
 
-  // Fallback empty string — actor creation will handle the error
+  // 3. /env.json runtime fallback — deployed to dist/ by the build pipeline
+  try {
+    const resp = await fetch("/env.json");
+    if (resp.ok) {
+      const json = await resp.json() as Record<string, string>;
+      const fromEnvJson = json["backend_canister_id"];
+      if (isValidId(fromEnvJson)) return fromEnvJson;
+    }
+  } catch {
+    // env.json not present or not parseable — not fatal
+  }
+
+  // No canister ID found anywhere
   console.error(
-    "[OnlySigned] Could not detect backend canister ID from env vars or window.ic. " +
+    "[OnlySigned] Could not detect backend canister ID from env vars, window.ic, or /env.json. " +
     "Set VITE_BACKEND_CANISTER_ID at build time. Actor calls will fail until this is resolved."
   );
   return "";
 }
 
-export const CANISTER_ID = detectCanisterId();
+/**
+ * Synchronous best-effort canister ID, resolved from build-time env vars only.
+ * Used by parts of the app that can't await (e.g. top-level module initializers).
+ * Falls back to empty string; async loadConfig() should be preferred.
+ */
+function detectCanisterIdSync(): string {
+  const viteBackend = import.meta.env.VITE_BACKEND_CANISTER_ID as string | undefined;
+  if (isValidId(viteBackend)) return viteBackend;
+
+  const viteCanister = import.meta.env.VITE_CANISTER_ID_BACKEND as string | undefined;
+  if (isValidId(viteCanister)) return viteCanister;
+
+  try {
+    const win = window as unknown as Record<string, unknown>;
+    const ic = win["ic"] as Record<string, unknown> | undefined;
+    if (ic) {
+      const canister = ic["BACKEND_CANISTER_ID"] as string | undefined;
+      if (isValidId(canister)) return canister;
+      const canisters = ic["canisters"] as Record<string, unknown> | undefined;
+      if (canisters) {
+        const backend = canisters["backend"] as { canister_id?: string } | undefined;
+        if (isValidId(backend?.canister_id)) return backend!.canister_id!;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return "";
+}
+
+export const CANISTER_ID = detectCanisterIdSync();
 
 export const IS_LOCAL = import.meta.env.DEV === true;
 
@@ -52,11 +104,10 @@ export interface AppConfig {
 
 /**
  * Async config loader used by the blob-storage scaffold (FileStorage.ts).
- * Caffeine injects this at deploy time; here we provide a runtime fallback
- * that reads the same env vars used by the rest of the app.
+ * Uses the full async detectCanisterId() which includes the /env.json fallback.
  */
 export async function loadConfig(): Promise<AppConfig> {
-  const canisterId = detectCanisterId();
+  const canisterId = await detectCanisterId();
   const isLocal = import.meta.env.DEV === true;
   const host = isLocal ? "http://localhost:4943" : "https://ic0.app";
 

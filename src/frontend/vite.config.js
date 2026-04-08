@@ -39,7 +39,11 @@ function fixBackendReservedKeywords() {
 // process.env; vite-plugin-environment already exposes it as
 // import.meta.env.CANISTER_ID_BACKEND, but config.ts looks for the VITE_
 // prefixed names, so we explicitly define both here.
-const BACKEND_CANISTER_ID = process.env.CANISTER_ID_BACKEND || "";
+//
+// Guard against the literal string "undefined" that can appear when env.json
+// is copied before environment variables are substituted.
+const RAW_BACKEND_ID = process.env.CANISTER_ID_BACKEND || "";
+const BACKEND_CANISTER_ID = RAW_BACKEND_ID === "undefined" ? "" : RAW_BACKEND_ID;
 
 export default defineConfig({
   logLevel: "error",

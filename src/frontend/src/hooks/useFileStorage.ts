@@ -127,6 +127,17 @@ export function useFileUpload(): {
     setIsUploading(true);
     try {
       const config = await loadConfig();
+
+      if (
+        !config.backend_canister_id ||
+        config.backend_canister_id === "undefined"
+      ) {
+        throw new Error(
+          "Upload failed: backend canister ID could not be resolved. " +
+            "Please refresh the page and try again. If the problem persists, contact support.",
+        );
+      }
+
       const client = await buildStorageClient(actor, config);
       return await client.putFile(path, file, onProgress);
     } finally {

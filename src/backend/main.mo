@@ -101,8 +101,25 @@ actor {
     prefix # "-" # seq.toText() # "-" # (now() / 1_000_000).toText()
   };
 
+  /// DEFINITIVE anonymous-principal guard.
+  /// Traps on ALL known representations of an anonymous / invalid principal:
+  ///   - Principal.isAnonymous()  → catches the canonical 2vxsx-fae form
+  ///   - text == "aaaaa-aa"       → catches the checksum-free serialisation
+  ///   - text == "2vxsx-fae"      → redundant but explicit
+  ///   - text is empty            → catches uninitialised fields
+  /// This is called as the FIRST statement inside every public update function.
+  func assertNotAnonymous(caller : Principal) {
+    if (caller.isAnonymous()) {
+      Runtime.trap("Caller is anonymous. Please log in with Internet Identity before performing this action.");
+    };
+    let t = caller.toText();
+    if (t == "" or t == "aaaaa-aa" or t == "2vxsx-fae") {
+      Runtime.trap("Caller is anonymous. Please log in with Internet Identity before performing this action.");
+    };
+  };
+
   func requireUser(caller : Principal) {
-    if (caller.isAnonymous()) Runtime.trap("Unauthorized: must be logged in");
+    assertNotAnonymous(caller);
   };
 
   func isAdminCaller(caller : Principal) : Bool {
@@ -175,6 +192,7 @@ actor {
   // ═══════════════════════════════════════════════════════════════════
 
   public shared ({ caller }) func registerUser(displayName : Text) : async { #ok : Nat; #err : Text } {
+    assertNotAnonymous(caller);
     let result = Users.registerUser(usersMap, userCount, caller, displayName);
     switch result {
       case (#ok num) {
@@ -191,11 +209,13 @@ actor {
   };
 
   public shared ({ caller }) func updateMyProfile(args : Users.UpdateProfileArgs) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.updateProfile(usersMap, caller, args)
   };
 
   public shared ({ caller }) func setUsername(username : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.setUsername(usersMap, caller, username)
   };
@@ -227,11 +247,13 @@ actor {
   // ─── Following ──────────────────────────────────────────────────────────────
 
   public shared ({ caller }) func followUser(target : Principal) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.followUser(usersMap, followMap, followersMap, caller, target)
   };
 
   public shared ({ caller }) func unfollowUser(target : Principal) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.unfollowUser(usersMap, followMap, followersMap, caller, target)
   };
@@ -251,11 +273,13 @@ actor {
   // ─── Admin user management ───────────────────────────────────────────────────
 
   public shared ({ caller }) func reclaimAdmin() : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.reclaimAdmin(usersMap, caller)
   };
 
   public shared ({ caller }) func setUserAdmin(target : Principal, adminValue : Bool) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.setUserAdmin(usersMap, caller, target, adminValue)
   };
@@ -265,6 +289,7 @@ actor {
     isIssuer : Bool,
     subtype  : ?{ #Celebrity; #Government; #Institution },
   ) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let sub : ?Users.IssuerSubtype = switch subtype {
       case (?#Celebrity)   ?(#Celebrity : Users.IssuerSubtype);
@@ -288,9 +313,7 @@ actor {
     fileRefs     : [Assets.FileRef],
   ) : async { #ok : Text; #err : Text } {
     // Backend guard: reject anonymous / invalid principals before any other logic
-    if (caller.isAnonymous()) return #err("Authentication required. Please log in before creating an asset.");
-    if (caller.toText() == "aaaaa-aa") return #err("Invalid principal. Please reconnect your Internet Identity.");
-    if (caller.toText() == "") return #err("Empty principal. Please reconnect your Internet Identity.");
+    assertNotAnonymous(caller);
     requireUser(caller);
     let result = Assets.createAsset(assetsState, callerCtx(caller), name, description, basePrice, royaltyBps, collectionId, fileRefs);
     switch result {
@@ -313,12 +336,14 @@ actor {
     privacyPublic : Bool,
     fileRefs      : [Assets.FileRef],
   ) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.touch(usersMap, caller);
     Assets.updateAsset(assetsState, callerCtx(caller), id, name, description, basePrice, royaltyBps, collectionId, privacyPublic, fileRefs)
   };
 
   public shared ({ caller }) func deleteAsset(id : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.touch(usersMap, caller);
     Assets.deleteAsset(assetsState, callerCtx(caller), id)
@@ -337,6 +362,7 @@ actor {
   };
 
   public shared ({ caller }) func registerFileReference(assetId : Text, fileRef : Assets.FileRef) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Assets.registerFileReference(assetsState, callerCtx(caller), assetId, fileRef)
   };
@@ -347,6 +373,7 @@ actor {
     name        : Text,
     description : ?Text,
   ) : async { #ok : Text; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.touch(usersMap, caller);
     Assets.createCollection(assetsState, callerCtx(caller), name, description)
@@ -362,12 +389,14 @@ actor {
     saleCurrency  : Text,
     saleMethod    : Assets.SaleMethod,
   ) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.touch(usersMap, caller);
     Assets.updateCollection(assetsState, callerCtx(caller), id, name, description, privacyPublic, forSale, salePrice, saleCurrency, saleMethod)
   };
 
   public shared ({ caller }) func deleteCollection(id : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.touch(usersMap, caller);
     Assets.deleteCollection(assetsState, callerCtx(caller), id)
@@ -388,6 +417,7 @@ actor {
     saleCurrency : Text,
     saleMethod   : Assets.SaleMethod,
   ) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Users.touch(usersMap, caller);
     Assets.setCollectionForSale(assetsState, callerCtx(caller), id, forSale, salePrice, saleCurrency, saleMethod)
@@ -402,6 +432,7 @@ actor {
     price    : Nat,
     currency : Text,
   ) : async { #ok : Text; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let canIssue   = Users.canIssueCerts(usersMap, caller);
     let dName      = userDisplayName(caller);
@@ -423,6 +454,7 @@ actor {
   };
 
   public shared ({ caller }) func setSignedCopyPrivacy(id : Text, privacyPublic : Bool) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Signing.setSignedCopyPrivacy(signingState, caller, id, privacyPublic, isAdminCaller(caller))
   };
@@ -457,6 +489,7 @@ actor {
     signedCopyId : Text,
     invitee      : Principal,
   ) : async { #ok : Text; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let result = Signing.inviteCoSigner(
       signingState,
@@ -471,6 +504,7 @@ actor {
   };
 
   public shared ({ caller }) func acceptCoSignInvitation(invitationId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let dName      = userDisplayName(caller);
     let issuerType = userCertIssuerType(caller);
@@ -483,6 +517,7 @@ actor {
   };
 
   public shared ({ caller }) func declineCoSignInvitation(invitationId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let result = Signing.declineCoSignInvitation(signingState, caller, invitationId);
     switch result {
@@ -497,6 +532,7 @@ actor {
   };
 
   public shared ({ caller }) func generateDownloadPackage(signedCopyId : Text) : async { #ok : Signing.DownloadManifest; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     Signing.generateDownloadPackage(signingState, caller, signedCopyId)
   };
@@ -518,6 +554,7 @@ actor {
     currency   : Text,
     saleMethod : Marketplace.SaleMethod,
   ) : async { #ok : Text; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let ownerOfItem : Principal = switch itemType {
       case (#SignedCopy) {
@@ -543,6 +580,7 @@ actor {
   };
 
   public shared ({ caller }) func delistItem(listingId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let result = Marketplace.delistItem(listings, caller, listingId, isAdminCaller(caller));
     switch result {
@@ -569,6 +607,7 @@ actor {
   };
 
   public shared ({ caller }) func purchaseItem(listingId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let listingOpt = Marketplace.getListing(listings, listingId);
     let l = switch listingOpt {
@@ -617,6 +656,7 @@ actor {
   };
 
   public shared ({ caller }) func placeBid(listingId : Text, amount : Nat) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     seqTx += 1;
     let result = Marketplace.placeBid(listings, wallets, txs, auditLog, seqTx, caller, listingId, amount);
@@ -634,6 +674,7 @@ actor {
   };
 
   public shared ({ caller }) func depositFunds(currency : Text, amount : Nat) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     if (amount == 0) return #err("Amount must be greater than zero");
     seqTx += 1;
@@ -646,6 +687,7 @@ actor {
     amount             : Nat,
     destinationAddress : ?Text,
   ) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     seqTx += 1;
     Marketplace.withdrawFunds(wallets, txs, auditLog, seqTx, caller, amount, currency, destinationAddress)
@@ -672,6 +714,7 @@ actor {
   // ═══════════════════════════════════════════════════════════════════
 
   public shared ({ caller }) func sendContactInvitation(to : Principal) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let result = Chat.sendContactInvitation(
       caller, to, contactInvitations, contactsMap,
@@ -688,6 +731,7 @@ actor {
   };
 
   public shared ({ caller }) func acceptContactInvitation(invitationId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let invOpt = contactInvitations.values().find(
       func (inv : Chat.ContactInvitation) : Bool { inv.id == invitationId }
@@ -706,6 +750,7 @@ actor {
   };
 
   public shared ({ caller }) func declineContactInvitation(invitationId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let invOpt = contactInvitations.values().find(
       func (inv : Chat.ContactInvitation) : Bool { inv.id == invitationId }
@@ -725,6 +770,7 @@ actor {
   };
 
   public shared ({ caller }) func sendMessage(to : Principal, content : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let result = Chat.sendMessage(
       caller, to, content,
@@ -749,10 +795,12 @@ actor {
   };
 
   public shared ({ caller }) func markMessageRead(messageId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     Chat.markMessageRead(caller, messageId, messagesMap)
   };
 
   public shared ({ caller }) func shareAssetWithContact(assetId : Text, with_ : Principal) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let assetOwner : Principal = switch (assetsState.assetsById.get(assetId)) {
       case null return #err("Asset not found");
@@ -767,6 +815,7 @@ actor {
   };
 
   public shared ({ caller }) func revokeAssetShare(assetId : Text, with_ : Principal) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     let result = Chat.revokeAssetShare(caller, assetId, with_, assetSharesMap);
     switch result {
@@ -785,6 +834,7 @@ actor {
   // ═══════════════════════════════════════════════════════════════════
 
   public shared ({ caller }) func mintUsernameNFT(username : Text, forPrincipal : Principal) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     if (not isAdminCaller(caller)) return #err("Only admins can mint Username NFTs");
     if (username.isEmpty()) return #err("Username is required");
@@ -803,6 +853,7 @@ actor {
   };
 
   public shared ({ caller }) func transferUsernameNFT(username : Text, toPrincipal : Principal) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     if (not isAdminCaller(caller)) return #err("Only admins can transfer Username NFTs");
     switch (usernameNFTs.get(username)) {
@@ -838,6 +889,7 @@ actor {
     amount   : Nat,
     currency : Text,
   ) : async { #ok : Text; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     seqOffer += 1;
     let id = mkId("uoff", seqOffer);
@@ -867,6 +919,7 @@ actor {
   };
 
   public shared ({ caller }) func acceptUsernameOffer(offerId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     if (not isAdminCaller(caller)) return #err("Admin only");
     switch (usernameOffers.get(offerId)) {
@@ -921,6 +974,7 @@ actor {
   };
 
   public shared ({ caller }) func rejectUsernameOffer(offerId : Text) : async { #ok; #err : Text } {
+    assertNotAnonymous(caller);
     requireUser(caller);
     if (not isAdminCaller(caller)) return #err("Admin only");
     switch (usernameOffers.get(offerId)) {

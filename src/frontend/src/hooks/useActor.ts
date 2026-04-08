@@ -38,17 +38,23 @@ function createActor(
 }
 
 /**
- * Known string representations of anonymous / invalid principals.
- * "2vxsx-fae" is the canonical IC anonymous principal.
- * "aaaaa-aa"  is what you get from Principal.fromUint8Array(Uint8Array(0))
- *              or Principal.fromText("") — an all-zero/empty principal.
- * Both must be rejected before any authenticated canister call.
+ * All known string representations of anonymous / invalid principals.
+ *
+ * "2vxsx-fae" — canonical IC anonymous principal (Principal.anonymous())
+ * "aaaaa-aa"  — empty/zero principal from Principal.fromText("") or
+ *               Principal.fromUint8Array(new Uint8Array(0))
+ *
+ * Both MUST be rejected before any authenticated canister call.
+ * This set is the single source of truth — keep in sync with useQueries.ts.
  */
-const INVALID_PRINCIPALS = new Set(["2vxsx-fae", "aaaaa-aa"]);
+const ANONYMOUS_PRINCIPALS = new Set(["2vxsx-fae", "aaaaa-aa"]);
 
-/** Returns true when the principal text represents a real authenticated user. */
-function isValidPrincipal(text: string): boolean {
-  return text.length > 0 && !INVALID_PRINCIPALS.has(text);
+/**
+ * Returns true only when the principal text represents a real, authenticated
+ * user — i.e. it is non-empty and not one of the known anonymous forms.
+ */
+function isRealPrincipalText(text: string): boolean {
+  return text.length > 0 && !ANONYMOUS_PRINCIPALS.has(text);
 }
 
 export function useActor(): {
@@ -60,28 +66,69 @@ export function useActor(): {
   const result = _useActor(createActor as any);
   const { identity, isInitializing } = useInternetIdentity();
 
-  // Determine whether the current identity is a real authenticated user.
-  // "2vxsx-fae" is the canonical anonymous principal.
-  // "aaaaa-aa"  is what you get from an empty / zero principal.
-  // Both must be rejected.
-  const principalText = identity?.getPrincipal()?.toString() ?? "";
-  const identityIsReal =
-    !!identity && !isInitializing && isValidPrincipal(principalText);
+  /**
+   * THREE-LAYER identity check — all three must pass for the actor to be exposed:
+   *
+   *  1. identity object exists and isInitializing is false
+   *  2. identity.getPrincipal().isAnonymous() === false  (IC SDK canonical check)
+   *  3. principal.toString() is not in the ANONYMOUS_PRINCIPALS set  (belt-and-suspenders)
+   *
+   * Layer 2 catches the canonical anonymous principal used by the IC SDK.
+   * Layer 3 catches the "aaaaa-aa" empty/zero form that isAnonymous() may not
+   * recognise depending on SDK version, and any other edge-case representations.
+   *
+   * _useActor from @caffeineai/core-infrastructure ALWAYS creates an actor with
+   * an anonymous agent on startup (before login). We must NEVER expose that
+   * actor — callers use `if (!actor)` as their primary guard, so a non-null
+   * anonymous actor bypasses every downstream check.
+   */
+  const identityIsReal = (() => {
+    // Layer 1: identity must exist and initialisation must be complete
+    if (!identity || isInitializing) return false;
 
-  // isAuthenticated requires identity to be real AND the actor query to have
-  // finished recreating (isFetching === false) so the actor in the query
-  // cache corresponds to the authenticated identity, not an old one.
+    let principal: ReturnType<typeof identity.getPrincipal>;
+    try {
+      principal = identity.getPrincipal();
+    } catch {
+      // getPrincipal() threw — identity not ready
+      return false;
+    }
+
+    // Layer 2: IC SDK canonical anonymous check
+    try {
+      if (principal.isAnonymous()) return false;
+    } catch {
+      // isAnonymous() unavailable in this SDK version — fall through to layer 3
+    }
+
+    // Layer 3: string-based guard for "aaaaa-aa" and "2vxsx-fae"
+    const text = (() => {
+      try {
+        return principal.toString();
+      } catch {
+        return "";
+      }
+    })();
+
+    return isRealPrincipalText(text);
+  })();
+
+  /**
+   * isAuthenticated: identity is confirmed real AND the actor query has
+   * finished rebuilding (isFetching === false). This ensures the actor in
+   * the query cache was built with the authenticated identity, not the old
+   * anonymous one that existed before login completed.
+   */
   const isAuthenticated = identityIsReal && !result.isFetching;
 
-  // CRITICAL: The underlying _useActor hook creates an anonymous actor when
-  // no identity is present (see core-infrastructure useActor.js lines 18-21).
-  // We must NEVER expose that anonymous actor to callers — mutations check
-  // `if (!actor)` as their primary guard. If we pass through the anonymous
-  // actor, that guard is bypassed and the backend rejects with
-  // "Principal aaaaa-aa does not have a valid checksum".
-  //
-  // Rule: actor is non-null ONLY when the identity is real AND the actor
-  // query has finished building with that identity (not mid-recreate).
+  /**
+   * CRITICAL RULE: actor is non-null ONLY when:
+   *   (a) the identity is confirmed real (all three layers above passed), AND
+   *   (b) the actor query is not currently rebuilding (isFetching === false)
+   *
+   * This means any code that checks `if (!actor)` will correctly block
+   * during login transitions and before authentication.
+   */
   const actor: Backend | null =
     identityIsReal && !result.isFetching
       ? (result.actor as Backend | null)
@@ -89,7 +136,10 @@ export function useActor(): {
 
   return {
     actor,
-    isFetching: result.isFetching || (!!identity && !identityIsReal),
+    // isFetching is true while initialising OR while we have an identity that
+    // hasn't yet been confirmed as real (prevents premature "not loading" state)
+    isFetching:
+      result.isFetching || isInitializing || (!!identity && !identityIsReal),
     isAuthenticated,
   };
 }

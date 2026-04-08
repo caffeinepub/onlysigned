@@ -29,6 +29,10 @@ function detectCanisterId(): string {
   }
 
   // Fallback empty string — actor creation will handle the error
+  console.error(
+    "[OnlySigned] Could not detect backend canister ID from env vars or window.ic. " +
+    "Set VITE_BACKEND_CANISTER_ID at build time. Actor calls will fail until this is resolved."
+  );
   return "";
 }
 

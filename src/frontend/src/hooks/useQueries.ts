@@ -3,6 +3,7 @@
  * All backend methods are called via the typed actor from useActor().
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
 import type {
   AuditLogEntry,
   CoSignInvitation,
@@ -703,72 +704,37 @@ export function useDeleteCollection() {
 /**
  * All known string representations of invalid / anonymous principals.
  * Must be kept in sync with the set in useActor.ts.
+ *
+ * "2vxsx-fae" — IC SDK canonical anonymous principal
+ * "aaaaa-aa"  — empty/zero principal from Principal.fromText("") or
+ *               Principal.fromUint8Array(new Uint8Array(0))
  */
 const INVALID_PRINCIPAL_TEXTS = new Set(["2vxsx-fae", "aaaaa-aa"]);
 
 /** Returns true when the principal text is a real authenticated identity. */
-function isValidPrincipalText(text: string): boolean {
+function isRealPrincipalText(text: string): boolean {
   return text.length > 0 && !INVALID_PRINCIPAL_TEXTS.has(text);
-}
-
-/**
- * Waits up to `maxMs` in `intervalMs` increments, re-checking whether the
- * actor's own identity has settled to a non-anonymous principal.
- * Returns the settled principal text, or throws after timeout.
- *
- * This is the deepest defence against the "aaaaa-aa" principal race: even if
- * the React render cycle has marked isFetching===false, the agent inside the
- * actor may still be mid-transition. Polling directly against the actor's agent
- * principal closes that final timing window.
- */
-async function waitForSettledPrincipal(
-  actor: { getCallerPrincipal?: () => Promise<string> } | null,
-  identity:
-    | { getPrincipal: () => { toString: () => string } }
-    | null
-    | undefined,
-  maxMs = 3000,
-  intervalMs = 100,
-): Promise<string> {
-  const deadline = Date.now() + maxMs;
-  while (Date.now() < deadline) {
-    // Prefer reading from the actor's own perspective if available,
-    // fall back to the identity object we have in closure.
-    let principalText: string;
-    if (
-      actor &&
-      typeof (actor as Record<string, unknown>).getCallerPrincipal ===
-        "function"
-    ) {
-      try {
-        principalText = await (
-          actor as { getCallerPrincipal: () => Promise<string> }
-        ).getCallerPrincipal();
-      } catch {
-        principalText = identity?.getPrincipal()?.toString() ?? "";
-      }
-    } else {
-      principalText = identity?.getPrincipal()?.toString() ?? "";
-    }
-
-    if (isValidPrincipalText(principalText)) {
-      return principalText;
-    }
-    // Not settled yet — wait one interval and retry
-    await new Promise<void>((resolve) => setTimeout(resolve, intervalMs));
-  }
-  // Final synchronous read as last resort
-  const finalText = identity?.getPrincipal()?.toString() ?? "";
-  if (isValidPrincipalText(finalText)) return finalText;
-  throw new Error(
-    "Cannot create asset: your authentication has not settled. Please wait a moment and try again.",
-  );
 }
 
 export function useCreateAsset() {
   const { actor, isAuthenticated, isFetching } = useActor();
   const { identity } = useInternetIdentityHook();
   const qc = useQueryClient();
+
+  /**
+   * Store actor and identity in refs so mutationFn always reads the LATEST
+   * values at call time — React Query mutations capture closure values at
+   * render time, so without refs a stale anonymous actor could slip through.
+   */
+  const actorRef = useRef(actor);
+  const identityRef = useRef(identity);
+  const isAuthRef = useRef(isAuthenticated);
+  const isFetchingRef = useRef(isFetching);
+  actorRef.current = actor;
+  identityRef.current = identity;
+  isAuthRef.current = isAuthenticated;
+  isFetchingRef.current = isFetching;
+
   return useMutation({
     mutationFn: async (data: {
       name: string;
@@ -778,39 +744,64 @@ export function useCreateAsset() {
       collectionId?: string;
       fileRefs: FileRef[];
     }) => {
-      // Guard 1: actor must exist and be settled (not mid-recreate after login)
-      if (!actor) throw new Error("Actor not available. Please try again.");
-      if (isFetching)
-        throw new Error("Authentication is still loading. Please wait.");
+      // ── Read freshest values from refs, never from closure snapshots ──────
+      const currentActor = actorRef.current;
+      const currentIdentity = identityRef.current;
+      const currentIsAuth = isAuthRef.current;
+      const currentIsFetching = isFetchingRef.current;
 
-      // Guard 2: isAuthenticated already checks identity, isInitializing,
-      //          isFetching, and principal validity — this is the primary gate.
-      if (!isAuthenticated)
-        throw new Error("Not authenticated. Please log in first.");
-
-      // Guard 3: Explicit principal string check using closure value — catches
-      //          edge cases where isAuthenticated is true but principal is stale.
-      const closurePrincipalText = identity?.getPrincipal()?.toString() ?? "";
-      if (!isValidPrincipalText(closurePrincipalText)) {
-        throw new Error(
-          "Your authentication has not fully settled yet. Please wait a moment and try again.",
-        );
+      // ── CHECK 1: actor must be non-null ────────────────────────────────────
+      // useActor() only returns a non-null actor when the identity has been
+      // confirmed as real AND the actor query has finished rebuilding.
+      // A null actor here means we are still anonymous or mid-transition.
+      if (!currentActor) {
+        throw new Error("Please log in before creating an asset.");
       }
 
-      // Guard 4: Live polling check — re-reads the principal at mutation time,
-      //          NOT from the closed-over render snapshot. This is the decisive
-      //          fix for the "aaaaa-aa" race: the mutation fires with the actor
-      //          that existed at render, but the agent inside that actor may have
-      //          been swapped. We wait up to 3 s for a valid principal before
-      //          proceeding. A 200 ms head-start delay lets any in-flight agent
-      //          recreation settle before the first poll.
-      await new Promise<void>((resolve) => setTimeout(resolve, 200));
-      await waitForSettledPrincipal(
-        actor as Parameters<typeof waitForSettledPrincipal>[0],
-        identity,
-      );
+      // ── CHECK 2: actor must not be mid-recreate ────────────────────────────
+      if (currentIsFetching) {
+        throw new Error("Connecting to wallet… please wait a moment.");
+      }
 
-      const result = await actor.createAsset(
+      // ── CHECK 3: isAuthenticated — the composite gate ─────────────────────
+      // This flag is true only when identity is real, initialisation is done,
+      // isFetching is false, and principal text is valid. It combines every
+      // earlier guard into one authoritative boolean.
+      if (!currentIsAuth) {
+        throw new Error("Please log in before creating an asset.");
+      }
+
+      // ── CHECK 4: direct principal validation on the identity object ────────
+      // Belt-and-suspenders: verify the principal one final time using both
+      // isAnonymous() (IC SDK canonical) and the known-bad text set.
+      // We do NOT await or poll here — this is intentionally synchronous so
+      // there is no window for a race condition to slip an anonymous principal
+      // through between checks.
+      if (!currentIdentity) {
+        throw new Error("Identity not available. Please log in first.");
+      }
+
+      const principal = currentIdentity.getPrincipal();
+
+      // isAnonymous() is the authoritative IC SDK check
+      let isAnon = false;
+      try {
+        isAnon = principal.isAnonymous();
+      } catch {
+        // older SDK build without isAnonymous() — fall through to text check
+      }
+      if (isAnon) {
+        throw new Error("Please log in before creating an asset.");
+      }
+
+      // String check catches "aaaaa-aa" and any other edge-case forms
+      const principalText = principal.toString();
+      if (!isRealPrincipalText(principalText)) {
+        throw new Error("Please log in before creating an asset.");
+      }
+
+      // ── All checks passed — call the backend ──────────────────────────────
+      const result = await currentActor.createAsset(
         data.name,
         data.description ?? null,
         data.basePrice,

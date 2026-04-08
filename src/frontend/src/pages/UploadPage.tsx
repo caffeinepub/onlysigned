@@ -25,7 +25,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Collection, FileRef } from "../backend-types";
 import CertificateDisplay from "../components/CertificateDisplay";
@@ -69,9 +69,9 @@ function UploadContent() {
   const navigate = useNavigate();
   const { identity, isInitializing } = useInternetIdentity();
   const { isAuthenticated, principal } = useAuth();
-  // isFetching tells us the actor is being recreated (e.g. just after login).
-  // We must wait for it to finish before allowing canister calls.
-  const { isFetching: actorFetching } = useActor();
+  // actor is non-null ONLY when the identity is confirmed real and the actor
+  // query has finished rebuilding — useActor() already enforces this contract.
+  const { actor, isFetching: actorFetching } = useActor();
   const { data: profile } = useMyProfile();
   const isAdmin = useIsAdmin();
   const { data: collectionsRaw } = useMyCollections();
@@ -84,9 +84,20 @@ function UploadContent() {
   const isEligible = isAdmin || (isCertificateIssuer && followerCount >= 500);
   const collections = (collectionsRaw ?? []) as Collection[];
 
-  // Auth readiness: identity exists, auth is fully settled, actor is not
-  // mid-recreate, and the principal is a real non-anonymous identity.
-  // This is the authoritative check before any write to the backend.
+  /**
+   * authReady: the SINGLE source of truth for whether the form submit button
+   * should be enabled. No timers, no polling — purely synchronous state checks.
+   *
+   * All three conditions must be true simultaneously:
+   *   1. actor !== null  — useActor guarantees this only when identity is real
+   *                        and the actor has finished rebuilding after login
+   *   2. isAuthenticated — composite check: identity real + principal valid +
+   *                        actor not mid-recreate
+   *   3. !actorFetching  — actor query is not currently rebuilding
+   *
+   * Since actor !== null already implies isAuthenticated and !actorFetching,
+   * checking all three is belt-and-suspenders but makes the intent explicit.
+   */
   const principalText = principal?.toString() ?? "";
   const isValidPrincipal =
     principalText.length > 0 && !INVALID_PRINCIPALS_SET.has(principalText);
@@ -95,46 +106,8 @@ function UploadContent() {
     !isInitializing &&
     !actorFetching &&
     isAuthenticated &&
-    isValidPrincipal;
-
-  /**
-   * authSettled: extra 500 ms hold-off after the first valid auth state is
-   * observed. This guards against the race where isFetching briefly returns
-   * to false between two actor recreations (e.g. the anonymous actor settling
-   * before the authenticated actor is built). The submit button stays disabled
-   * until this flag is true AND authReady is true simultaneously.
-   */
-  const [authSettled, setAuthSettled] = useState(false);
-  const authSettledTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    // Clear any pending timer when conditions change
-    if (authSettledTimer.current !== null) {
-      clearTimeout(authSettledTimer.current);
-      authSettledTimer.current = null;
-    }
-
-    if (authReady) {
-      // Start the 500 ms hold-off; only mark settled if authReady is still
-      // true when the timer fires (prevents accepting a fleeting valid state).
-      authSettledTimer.current = setTimeout(() => {
-        setAuthSettled(true);
-      }, 500);
-    } else {
-      // Auth not ready — reset settled flag immediately
-      setAuthSettled(false);
-    }
-
-    return () => {
-      if (authSettledTimer.current !== null) {
-        clearTimeout(authSettledTimer.current);
-      }
-    };
-  }, [authReady]);
-
-  // Full auth gate: requires both the instantaneous check AND the 500 ms
-  // hold-off to have passed. This is what guards the submit button.
-  const authFullyReady = authReady && authSettled;
+    isValidPrincipal &&
+    actor !== null;
 
   // Form state
   const [files, setFiles] = useState<File[]>([]);
@@ -197,7 +170,7 @@ function UploadContent() {
   };
 
   const handleSubmit = async () => {
-    if (!authFullyReady) {
+    if (!authReady) {
       toast.error(
         "Please wait for authentication to complete before creating an asset.",
       );
@@ -311,7 +284,7 @@ function UploadContent() {
             errors={errors}
             onSubmit={handleSubmit}
             isPending={createAsset.isPending || isUploading}
-            isAuthReady={authFullyReady}
+            isAuthReady={authReady}
             isLoggedIn={isAuthenticated}
             uploadProgress={uploadProgress}
           />

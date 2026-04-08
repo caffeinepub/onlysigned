@@ -1,15 +1,15 @@
-import ReactDOM from 'react-dom/client';
-import { InternetIdentityProvider } from './hooks/useInternetIdentity';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import App from './App';
-import './index.css';
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
 
-const queryClient = new QueryClient();
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-    <QueryClientProvider client={queryClient}>
-        <InternetIdentityProvider>
-            <App />
-        </InternetIdentityProvider>
-    </QueryClientProvider>
-);
+declare global {
+  interface BigInt {
+    toJSON(): string;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById("root")!).render(<App />);

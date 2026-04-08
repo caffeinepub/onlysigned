@@ -1,0 +1,570 @@
+type WalletBalance = 
+ record {
+   ckbtc: nat;
+   ckusdc: nat;
+   ckusdt: nat;
+   icp: nat;
+ };
+type UsernameOffer = 
+ record {
+   amount: nat;
+   currency: text;
+   id: text;
+   nftExists: bool;
+   offererPrincipal: principal;
+   status: OfferStatus;
+   submittedAt: int;
+   targetUsername: text;
+ };
+type UsernameNFT = 
+ record {
+   id: text;
+   mintedAt: int;
+   mintedBy: principal;
+   ownerPrincipal: principal;
+   transferHistory: vec TransferRecord;
+   username: text;
+ };
+type User = 
+ record {
+   bio: text;
+   birthdate: opt text;
+   certIssuerSubtype: opt IssuerSubtype;
+   displayName: text;
+   email: opt text;
+   followerCount: nat;
+   followingCount: nat;
+   hasUsernameNFT: bool;
+   id: principal;
+   isAdmin: bool;
+   isVerified: bool;
+   lastActiveTime: int;
+   personalUrl: opt text;
+   profilePhoto: opt text;
+   profileType: ProfileType;
+   registrationTime: int;
+   userNumber: nat;
+   username: opt text;
+ };
+type UpdateProfileArgs = 
+ record {
+   bio: text;
+   birthdate: opt text;
+   certIssuerSubtype: opt IssuerSubtype;
+   displayName: text;
+   email: opt text;
+   personalUrl: opt text;
+   profilePhoto: opt text;
+   profileType: ProfileType;
+ };
+type TxType = 
+ variant {
+   Bid;
+   Deposit;
+   OfferPayment;
+   Purchase;
+   Royalty;
+   Sale;
+   Withdrawal;
+ };
+type TransferRecord = 
+ record {
+   at: int;
+   from: principal;
+   to: principal;
+ };
+type Transaction = 
+ record {
+   amount: nat;
+   currency: text;
+   destinationAddress: opt text;
+   fromPrincipal: opt principal;
+   id: text;
+   itemId: opt text;
+   timestamp: int;
+   toPrincipal: principal;
+   txType: TxType;
+ };
+type SupportSubmission = 
+ record {
+   email: opt text;
+   id: text;
+   message: text;
+   status: SubmissionStatus;
+   subject: text;
+   submittedAt: int;
+   submitterPrincipal: opt principal;
+ };
+type SubmissionStatus = 
+ variant {
+   Pending;
+   Reviewed;
+ };
+type SignerInfo = 
+ record {
+   certIssuerType: opt text;
+   displayName: text;
+   "principal": principal;
+   signature: text;
+   signedAt: int;
+ };
+type SignedCopy = 
+ record {
+   assetId: text;
+   authenticityHash: text;
+   certificateId: text;
+   createdAt: int;
+   creatorId: principal;
+   currency: text;
+   id: text;
+   listedForSale: bool;
+   listingCurrency: opt text;
+   listingPrice: opt nat;
+   ownerId: principal;
+   price: nat;
+   privacyPublic: bool;
+   saleMethod: opt SaleMethod;
+   sequenceNumber: nat;
+   shareableUrl: text;
+   signers: vec SignerInfo;
+   tokenId: nat;
+ };
+type SearchFilter = 
+ record {
+   minFollowers: opt nat;
+   onlyAdmin: bool;
+   onlyVerified: bool;
+   profileType: opt ProfileType;
+   searchText: text;
+   sortBy: variant {
+             FollowerCount;
+             LastActive;
+             RegistrationTime;
+             UserNumber;
+           };
+   subtype: opt IssuerSubtype;
+ };
+type SaleMethod = 
+ variant {
+   Auction;
+   Direct;
+ };
+type ProfileType = 
+ variant {
+   CertificateIssuer;
+   Collector;
+ };
+type OfferStatus = 
+ variant {
+   Accepted;
+   Pending;
+   Rejected;
+ };
+type Message = 
+ record {
+   content: text;
+   fromPrincipal: principal;
+   id: text;
+   readAt: opt int;
+   sentAt: int;
+   toPrincipal: principal;
+ };
+type MarketplaceListing = 
+ record {
+   active: bool;
+   currency: text;
+   highestBid: opt nat;
+   highestBidder: opt principal;
+   id: text;
+   itemId: text;
+   itemType: ItemType;
+   listedAt: int;
+   price: nat;
+   saleMethod: SaleMethod;
+   sellerPrincipal: principal;
+ };
+type ListingFilter = 
+ record {
+   currency: opt text;
+   itemType: opt ItemType;
+   saleMethod: opt SaleMethod;
+ };
+type ItemType = 
+ variant {
+   Collection;
+   SignedCopy;
+ };
+type IssuerSubtype = 
+ variant {
+   Celebrity;
+   Government;
+   Institution;
+ };
+type InvitationStatus = 
+ variant {
+   Accepted;
+   Declined;
+   Pending;
+ };
+type ICRC7Metadata = 
+ record {
+   assetId: text;
+   authenticityHash: text;
+   certificateId: text;
+   creatorId: principal;
+   sequenceNumber: nat;
+   shareableUrl: text;
+   signers: vec SignerInfo;
+   tokenId: nat;
+ };
+type FileRef = 
+ record {
+   fileId: text;
+   filename: text;
+   mimeType: text;
+   sizeBytes: nat;
+ };
+type DownloadManifest = 
+ record {
+   assetId: text;
+   authenticityHash: text;
+   certificateId: text;
+   copyId: text;
+   generatedAt: int;
+   icrc7Metadata: ICRC7Metadata;
+   sequenceNumber: nat;
+   shareableUrl: text;
+   signers: vec SignerInfo;
+   tokenId: nat;
+ };
+type DailyMetrics = 
+ record {
+   assetsUploaded: nat;
+   date: text;
+   newUsers: nat;
+   salesCompleted: nat;
+   signedCopiesCreated: nat;
+   totalTransactionVolume: nat;
+ };
+type ContactInvitation = 
+ record {
+   createdAt: int;
+   fromPrincipal: principal;
+   id: text;
+   status: InvitationStatus;
+   toPrincipal: principal;
+ };
+type Collection = 
+ record {
+   createdAt: int;
+   description: opt text;
+   forSale: bool;
+   id: text;
+   name: text;
+   ownerId: principal;
+   privacyPublic: bool;
+   saleCurrency: text;
+   saleMethod: SaleMethod;
+   salePrice: nat;
+ };
+type CoSignInvitation = 
+ record {
+   createdAt: int;
+   id: text;
+   inviteePrincipal: principal;
+   inviterPrincipal: principal;
+   signedCopyId: text;
+   status: variant {
+             Accepted;
+             Declined;
+             Pending;
+           };
+ };
+type CanisterIdResult = 
+ record {
+   canisterId: text;
+   detectionMethod: text;
+ };
+type AuditLogEntry = 
+ record {
+   amount: nat;
+   currency: text;
+   destinationAddress: opt text;
+   fromPrincipal: opt principal;
+   id: text;
+   itemId: opt text;
+   timestamp: int;
+   toPrincipal: principal;
+   txType: TxType;
+ };
+type AssetShare = 
+ record {
+   assetId: text;
+   ownerPrincipal: principal;
+   revoked: bool;
+   sharedAt: int;
+   sharedWithPrincipal: principal;
+ };
+type Asset = 
+ record {
+   basePrice: nat;
+   collectionId: opt text;
+   createdAt: int;
+   description: opt text;
+   fileRefs: vec FileRef;
+   id: text;
+   name: text;
+   ownerId: principal;
+   privacyPublic: bool;
+   royaltyBps: nat;
+   updatedAt: int;
+ };
+type AdminStats = 
+ record {
+   activeUsersLast30Days: nat;
+   totalAssets: nat;
+   totalMarketplaceVolume: nat;
+   totalSignedCopies: nat;
+   totalTransactions: nat;
+   totalUsers: nat;
+ };
+service : {
+  acceptCoSignInvitation: (invitationId: text) -> (variant {
+                                                     err: text;
+                                                     ok;
+                                                   });
+  acceptContactInvitation: (invitationId: text) -> (variant {
+                                                      err: text;
+                                                      ok;
+                                                    });
+  acceptUsernameOffer: (offerId: text) -> (variant {
+                                             err: text;
+                                             ok;
+                                           });
+  checkIsFollowing: (target: principal) -> (bool) query;
+  createAsset: (name: text, description: opt text, basePrice: nat,
+   royaltyBps: nat, collectionId: opt text, fileRefs: vec FileRef) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
+  createCollection: (name: text, description: opt text) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
+  declineCoSignInvitation: (invitationId: text) -> (variant {
+                                                      err: text;
+                                                      ok;
+                                                    });
+  declineContactInvitation: (invitationId: text) -> (variant {
+                                                       err: text;
+                                                       ok;
+                                                     });
+  deleteAsset: (id: text) -> (variant {
+                                err: text;
+                                ok;
+                              });
+  deleteCollection: (id: text) -> (variant {
+                                     err: text;
+                                     ok;
+                                   });
+  delistItem: (listingId: text) -> (variant {
+                                      err: text;
+                                      ok;
+                                    });
+  depositFunds: (currency: text, amount: nat) -> (variant {
+                                                    err: text;
+                                                    ok;
+                                                  });
+  followUser: (target: principal) -> (variant {
+                                        err: text;
+                                        ok;
+                                      });
+  generateDownloadPackage: (signedCopyId: text) ->
+   (variant {
+      err: text;
+      ok: DownloadManifest;
+    });
+  getAdminStats: () -> (AdminStats) query;
+  getAllDailyMetrics: () -> (vec DailyMetrics) query;
+  getAllSupportSubmissions: () -> (vec SupportSubmission) query;
+  getAllTransactions: () -> (vec AuditLogEntry) query;
+  getAllUsernameNFTs: () -> (vec UsernameNFT) query;
+  getAllUsernameOffers: () -> (vec UsernameOffer) query;
+  getAllUsers: () -> (vec User) query;
+  getAsset: (id: text) -> (opt Asset) query;
+  getCanisterId: () -> (CanisterIdResult);
+  getCyclesBalance: () -> (nat);
+  getDailyMetrics: () -> (DailyMetrics) query;
+  getFollowers: ("principal": principal) -> (vec principal) query;
+  getFollowing: ("principal": principal) -> (vec principal) query;
+  getLatestActiveUsers: (limit: nat) -> (vec User) query;
+  getListing: (id: text) -> (opt MarketplaceListing) query;
+  getListings: (filter: opt ListingFilter) -> (vec MarketplaceListing) query;
+  getMessages: (with: principal) -> (vec Message) query;
+  getMyAssets: () -> (vec Asset) query;
+  getMyCoSignInvitations: () -> (vec CoSignInvitation) query;
+  getMyCollections: () -> (vec Collection) query;
+  getMyContacts: () -> (vec principal) query;
+  getMyProfile: () -> (opt User) query;
+  getMySignedCopies: () -> (vec SignedCopy) query;
+  getMyTransactions: (offset: nat, limit: nat) -> (vec Transaction) query;
+  getMyUsernameOffers: () -> (vec UsernameOffer) query;
+  getMyWallet: () -> (WalletBalance) query;
+  getPendingInvitations: () -> (vec ContactInvitation) query;
+  getPublicAssets: (owner: principal) -> (vec Asset) query;
+  getPublicCollections: (owner: principal) -> (vec Collection) query;
+  getPublicMarketplaceListings: () -> (vec MarketplaceListing) query;
+  getPublicProfile: ("principal": principal) -> (opt User) query;
+  getPublicSignedCopies: (owner: principal) -> (vec SignedCopy) query;
+  getSharedAssetsWithMe: () -> (vec AssetShare) query;
+  getSignedCopiesForAsset: (assetId: text) -> (vec SignedCopy) query;
+  getSignedCopy: (id: text) -> (opt SignedCopy) query;
+  getSignedCopyByUrl: (url: text) -> (opt SignedCopy) query;
+  getUserByNumber: (n: nat) -> (opt User) query;
+  getUserProfile: ("principal": principal) -> (opt User) query;
+  getUsernameNFT: (username: text) -> (opt UsernameNFT) query;
+  getWellKnownDomainVerification: () -> (text) query;
+  inviteCoSigner: (signedCopyId: text, invitee: principal) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
+  listForSale: (itemType: ItemType, itemId: text, price: nat, currency: 
+   text, saleMethod: SaleMethod) -> (variant {
+                                       err: text;
+                                       ok: text;
+                                     });
+  markMessageRead: (messageId: text) -> (variant {
+                                           err: text;
+                                           ok;
+                                         });
+  mintUsernameNFT: (username: text, forPrincipal: principal) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  placeBid: (listingId: text, amount: nat) -> (variant {
+                                                 err: text;
+                                                 ok;
+                                               });
+  purchaseItem: (listingId: text) -> (variant {
+                                        err: text;
+                                        ok;
+                                      });
+  reclaimAdmin: () -> (variant {
+                         err: text;
+                         ok;
+                       });
+  registerFileReference: (assetId: text, fileRef: FileRef) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  registerUser: (displayName: text) -> (variant {
+                                          err: text;
+                                          ok: nat;
+                                        });
+  rejectUsernameOffer: (offerId: text) -> (variant {
+                                             err: text;
+                                             ok;
+                                           });
+  revokeAssetShare: (assetId: text, with: principal) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  searchUsers: (filter: SearchFilter) -> (vec User) query;
+  sendContactInvitation: (to: principal) -> (variant {
+                                               err: text;
+                                               ok;
+                                             });
+  sendMessage: (to: principal, content: text) -> (variant {
+                                                    err: text;
+                                                    ok;
+                                                  });
+  setCanisterId: (id: text) -> (variant {
+                                  err: text;
+                                  ok;
+                                });
+  setCertificateIssuerStatus: (target: principal, isIssuer: bool, subtype:
+   opt variant {
+         Celebrity;
+         Government;
+         Institution;
+       }) -> (variant {
+                err: text;
+                ok;
+              });
+  setCollectionForSale: (id: text, forSale: bool, salePrice: nat,
+   saleCurrency: text, saleMethod: SaleMethod) -> (variant {
+                                                     err: text;
+                                                     ok;
+                                                   });
+  setSignedCopyPrivacy: (id: text, privacyPublic: bool) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  setUserAdmin: (target: principal, adminValue: bool) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  setUsername: (username: text) -> (variant {
+                                      err: text;
+                                      ok;
+                                    });
+  shareAssetWithContact: (assetId: text, with: principal) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  signAsset: (assetId: text, price: nat, currency: text) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
+  submitSupportForm: (subject: text, message: text, email: opt text) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  submitUsernameOffer: (username: text, amount: nat, currency: text) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
+  transferUsernameNFT: (username: text, toPrincipal: principal) ->
+   (variant {
+      err: text;
+      ok;
+    });
+  unfollowUser: (target: principal) -> (variant {
+                                          err: text;
+                                          ok;
+                                        });
+  updateAsset: (id: text, name: text, description: opt text, basePrice: 
+   nat, royaltyBps: nat, collectionId: opt text, privacyPublic: bool,
+   fileRefs: vec FileRef) -> (variant {
+                                err: text;
+                                ok;
+                              });
+  updateCollection: (id: text, name: text, description: opt text,
+   privacyPublic: bool, forSale: bool, salePrice: nat, saleCurrency: 
+   text, saleMethod: SaleMethod) -> (variant {
+                                       err: text;
+                                       ok;
+                                     });
+  updateMyProfile: (args: UpdateProfileArgs) -> (variant {
+                                                   err: text;
+                                                   ok;
+                                                 });
+  validateCertificate: (certificateId: text) -> (opt SignedCopy) query;
+  withdrawFunds: (currency: text, amount: nat, destinationAddress:
+   opt text) -> (variant {
+                   err: text;
+                   ok;
+                 });
+}

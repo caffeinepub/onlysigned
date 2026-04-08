@@ -9,6 +9,8 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -16,12 +18,25 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
+    "baseUrl": "./src",
     "types": ["vite/client", "node"],
     "paths": {
       "declarations/*": ["../declarations/*"],
-      "@/*": ["./src/*"]
+      "@/*": ["./*"],
+      "backend": ["./backend-types"],
+      "./backend": ["./backend-types"],
+      "../backend": ["./backend-types"]
     }
   },
   "include": ["src"],
-  "exclude": ["node_modules", "dist", "build", "*.config.js", "eslint-rules/**/*"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "*.config.js",
+    "src/backend.ts",
+    "src/backend.d.ts",
+    "src/blob-storage/StorageClient.ts",
+    "src/blob-storage/FileStorage.ts"
+  ]
 }

@@ -1,0 +1,27 @@
+{
+  "overview": "OnlySigned is a Web3 platform on the Internet Computer for trustless digital asset signing, certification, and trading. Creators, celebrities, institutions, and governments can sign digital assets as ICRC-7 NFTs — verifiable on-chain, impossible to fake — and sell them in a multi-currency open marketplace.",
+  "features": [
+    "ICRC-7 NFT signed copies with full on-chain certificate verification",
+    "Multi-signer co-signing with invitation system",
+    "Open marketplace for signed copies and collections (ICP, ckBTC, ckUSDC, ckUSDT)",
+    "Username NFT system with admin minting and purchase offer workflow",
+    "Following system, contacts, private chat, and private asset sharing",
+    "Admin dashboard with audit logs, metrics, cycles balance, and role reassignment",
+    "User Explorer with advanced filtering and public profile pages",
+    "Privacy-first: all items default to private, encrypted user data",
+    "Signed copy download packages with embedded certificates and ICRC-7 metadata",
+    ".well-known domain verification endpoint for onlysigned.com"
+  ],
+  "category": "web3-digital-collectibles",
+  "tags": [
+    "web3",
+    "nft",
+    "digital-signing",
+    "icrc7",
+    "marketplace",
+    "internet-computer",
+    "collectibles",
+    "certificates"
+  ],
+  "last_updated": "2026-04-08T00:39:59.444Z"
+}

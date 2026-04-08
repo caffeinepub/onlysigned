@@ -10,130 +10,537 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export type ApprovalStatus = { 'pending' : null } |
-  { 'approved' : null } |
-  { 'rejected' : null };
-export interface InviteCode {
-  'created' : Time,
-  'code' : string,
-  'used' : boolean,
+export interface AdminStats {
+  'totalAssets' : bigint,
+  'totalSignedCopies' : bigint,
+  'activeUsersLast30Days' : bigint,
+  'totalUsers' : bigint,
+  'totalTransactions' : bigint,
+  'totalMarketplaceVolume' : bigint,
 }
-export interface RSVP {
+export interface Asset {
+  'id' : string,
+  'royaltyBps' : bigint,
+  'collectionId' : [] | [string],
+  'ownerId' : Principal,
   'name' : string,
-  'inviteCode' : string,
-  'timestamp' : Time,
-  'attending' : boolean,
+  'createdAt' : bigint,
+  'description' : [] | [string],
+  'fileRefs' : Array<FileRef>,
+  'updatedAt' : bigint,
+  'privacyPublic' : boolean,
+  'basePrice' : bigint,
 }
-export interface ShoppingItem {
-  'productName' : string,
+export interface AssetShare {
+  'revoked' : boolean,
+  'assetId' : string,
+  'ownerPrincipal' : Principal,
+  'sharedAt' : bigint,
+  'sharedWithPrincipal' : Principal,
+}
+export interface AuditLogEntry {
+  'id' : string,
+  'itemId' : [] | [string],
+  'destinationAddress' : [] | [string],
+  'toPrincipal' : Principal,
+  'fromPrincipal' : [] | [Principal],
   'currency' : string,
-  'quantity' : bigint,
-  'priceInCents' : bigint,
-  'productDescription' : string,
+  'timestamp' : bigint,
+  'txType' : TxType,
+  'amount' : bigint,
 }
-export interface StripeConfiguration {
-  'allowedCountries' : Array<string>,
-  'secretKey' : string,
+export interface CanisterIdResult {
+  'detectionMethod' : string,
+  'canisterId' : string,
 }
-export type StripeSessionStatus = {
-    'completed' : { 'userPrincipal' : [] | [string], 'response' : string }
-  } |
-  { 'failed' : { 'error' : string } };
-export type Time = bigint;
-export interface TransformationInput {
-  'context' : Uint8Array,
-  'response' : http_request_result,
+export interface CoSignInvitation {
+  'id' : string,
+  'status' : { 'Accepted' : null } |
+    { 'Declined' : null } |
+    { 'Pending' : null },
+  'inviterPrincipal' : Principal,
+  'signedCopyId' : string,
+  'inviteePrincipal' : Principal,
+  'createdAt' : bigint,
 }
-export interface TransformationOutput {
-  'status' : bigint,
-  'body' : Uint8Array,
-  'headers' : Array<http_header>,
+export interface Collection {
+  'id' : string,
+  'saleMethod' : SaleMethod,
+  'saleCurrency' : string,
+  'ownerId' : Principal,
+  'name' : string,
+  'createdAt' : bigint,
+  'description' : [] | [string],
+  'privacyPublic' : boolean,
+  'salePrice' : bigint,
+  'forSale' : boolean,
 }
-export type TrustedPartyType = { 'creator' : null } |
-  { 'institution' : null } |
-  { 'celebrity' : null } |
-  { 'government' : null };
-export interface UserApprovalInfo {
-  'status' : ApprovalStatus,
+export interface ContactInvitation {
+  'id' : string,
+  'status' : InvitationStatus,
+  'createdAt' : bigint,
+  'toPrincipal' : Principal,
+  'fromPrincipal' : Principal,
+}
+export interface DailyMetrics {
+  'date' : string,
+  'totalTransactionVolume' : bigint,
+  'signedCopiesCreated' : bigint,
+  'salesCompleted' : bigint,
+  'newUsers' : bigint,
+  'assetsUploaded' : bigint,
+}
+export interface DownloadManifest {
+  'tokenId' : bigint,
+  'icrc7Metadata' : ICRC7Metadata,
+  'assetId' : string,
+  'signers' : Array<SignerInfo>,
+  'generatedAt' : bigint,
+  'authenticityHash' : string,
+  'certificateId' : string,
+  'shareableUrl' : string,
+  'sequenceNumber' : bigint,
+  'copyId' : string,
+}
+export interface FileRef {
+  'mimeType' : string,
+  'filename' : string,
+  'fileId' : string,
+  'sizeBytes' : bigint,
+}
+export interface ICRC7Metadata {
+  'tokenId' : bigint,
+  'assetId' : string,
+  'signers' : Array<SignerInfo>,
+  'creatorId' : Principal,
+  'authenticityHash' : string,
+  'certificateId' : string,
+  'shareableUrl' : string,
+  'sequenceNumber' : bigint,
+}
+export type InvitationStatus = { 'Accepted' : null } |
+  { 'Declined' : null } |
+  { 'Pending' : null };
+export type IssuerSubtype = { 'Institution' : null } |
+  { 'Celebrity' : null } |
+  { 'Government' : null };
+export type ItemType = { 'Collection' : null } |
+  { 'SignedCopy' : null };
+export interface ListingFilter {
+  'saleMethod' : [] | [SaleMethod],
+  'currency' : [] | [string],
+  'itemType' : [] | [ItemType],
+}
+export interface MarketplaceListing {
+  'id' : string,
+  'itemId' : string,
+  'sellerPrincipal' : Principal,
+  'saleMethod' : SaleMethod,
+  'active' : boolean,
+  'highestBidder' : [] | [Principal],
+  'listedAt' : bigint,
+  'highestBid' : [] | [bigint],
+  'currency' : string,
+  'itemType' : ItemType,
+  'price' : bigint,
+}
+export interface Message {
+  'id' : string,
+  'content' : string,
+  'sentAt' : bigint,
+  'toPrincipal' : Principal,
+  'fromPrincipal' : Principal,
+  'readAt' : [] | [bigint],
+}
+export type OfferStatus = { 'Rejected' : null } |
+  { 'Accepted' : null } |
+  { 'Pending' : null };
+export type ProfileType = { 'Collector' : null } |
+  { 'CertificateIssuer' : null };
+export type SaleMethod = { 'Auction' : null } |
+  { 'Direct' : null };
+export interface SearchFilter {
+  'subtype' : [] | [IssuerSubtype],
+  'sortBy' : { 'UserNumber' : null } |
+    { 'LastActive' : null } |
+    { 'RegistrationTime' : null } |
+    { 'FollowerCount' : null },
+  'searchText' : string,
+  'onlyVerified' : boolean,
+  'onlyAdmin' : boolean,
+  'profileType' : [] | [ProfileType],
+  'minFollowers' : [] | [bigint],
+}
+export interface SignedCopy {
+  'id' : string,
+  'saleMethod' : [] | [SaleMethod],
+  'tokenId' : bigint,
+  'ownerId' : Principal,
+  'assetId' : string,
+  'signers' : Array<SignerInfo>,
+  'createdAt' : bigint,
+  'creatorId' : Principal,
+  'listingPrice' : [] | [bigint],
+  'authenticityHash' : string,
+  'certificateId' : string,
+  'listedForSale' : boolean,
+  'privacyPublic' : boolean,
+  'currency' : string,
+  'listingCurrency' : [] | [string],
+  'shareableUrl' : string,
+  'sequenceNumber' : bigint,
+  'price' : bigint,
+}
+export interface SignerInfo {
+  'certIssuerType' : [] | [string],
   'principal' : Principal,
+  'signature' : string,
+  'displayName' : string,
+  'signedAt' : bigint,
 }
-export interface UserProfile {
+export type SubmissionStatus = { 'Reviewed' : null } |
+  { 'Pending' : null };
+export interface SupportSubmission {
+  'id' : string,
+  'status' : SubmissionStatus,
+  'subject' : string,
+  'submitterPrincipal' : [] | [Principal],
+  'submittedAt' : bigint,
+  'email' : [] | [string],
+  'message' : string,
+}
+export interface Transaction {
+  'id' : string,
+  'itemId' : [] | [string],
+  'destinationAddress' : [] | [string],
+  'toPrincipal' : Principal,
+  'fromPrincipal' : [] | [Principal],
+  'currency' : string,
+  'timestamp' : bigint,
+  'txType' : TxType,
+  'amount' : bigint,
+}
+export interface TransferRecord {
+  'at' : bigint,
+  'to' : Principal,
+  'from' : Principal,
+}
+export type TxType = { 'Bid' : null } |
+  { 'Deposit' : null } |
+  { 'Sale' : null } |
+  { 'Withdrawal' : null } |
+  { 'Royalty' : null } |
+  { 'OfferPayment' : null } |
+  { 'Purchase' : null };
+export interface UpdateProfileArgs {
   'bio' : string,
   'personalUrl' : [] | [string],
-  'trustedPartyType' : [] | [TrustedPartyType],
-  'principal' : Principal,
-  'isCreator' : boolean,
+  'displayName' : string,
+  'birthdate' : [] | [string],
+  'profilePhoto' : [] | [string],
+  'email' : [] | [string],
+  'certIssuerSubtype' : [] | [IssuerSubtype],
+  'profileType' : ProfileType,
+}
+export interface User {
+  'id' : Principal,
+  'bio' : string,
+  'personalUrl' : [] | [string],
   'username' : [] | [string],
   'displayName' : string,
-  'birthdate' : [] | [bigint],
-  'profileImage' : [] | [string],
+  'birthdate' : [] | [string],
   'profilePhoto' : [] | [string],
-  'isTrustedParty' : boolean,
+  'lastActiveTime' : bigint,
   'email' : [] | [string],
   'isVerified' : boolean,
   'userNumber' : bigint,
-  'usernameNFT' : [] | [string],
+  'hasUsernameNFT' : boolean,
+  'certIssuerSubtype' : [] | [IssuerSubtype],
+  'followerCount' : bigint,
   'isAdmin' : boolean,
+  'followingCount' : bigint,
+  'registrationTime' : bigint,
+  'profileType' : ProfileType,
 }
-export type UserRole = { 'admin' : null } |
-  { 'user' : null } |
-  { 'guest' : null };
-export interface _CaffeineStorageCreateCertificateResult {
-  'method' : string,
-  'blob_hash' : string,
+export interface UsernameNFT {
+  'id' : string,
+  'username' : string,
+  'ownerPrincipal' : Principal,
+  'transferHistory' : Array<TransferRecord>,
+  'mintedAt' : bigint,
+  'mintedBy' : Principal,
 }
-export interface _CaffeineStorageRefillInformation {
-  'proposed_top_up_amount' : [] | [bigint],
+export interface UsernameOffer {
+  'id' : string,
+  'status' : OfferStatus,
+  'targetUsername' : string,
+  'nftExists' : boolean,
+  'offererPrincipal' : Principal,
+  'submittedAt' : bigint,
+  'currency' : string,
+  'amount' : bigint,
 }
-export interface _CaffeineStorageRefillResult {
-  'success' : [] | [boolean],
-  'topped_up_amount' : [] | [bigint],
-}
-export interface http_header { 'value' : string, 'name' : string }
-export interface http_request_result {
-  'status' : bigint,
-  'body' : Uint8Array,
-  'headers' : Array<http_header>,
+export interface WalletBalance {
+  'icp' : bigint,
+  'ckbtc' : bigint,
+  'ckusdc' : bigint,
+  'ckusdt' : bigint,
 }
 export interface _SERVICE {
-  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<string>>,
-  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
-    [Array<string>],
-    undefined
-  >,
-  '_caffeineStorageCreateCertificate' : ActorMethod<
+  'acceptCoSignInvitation' : ActorMethod<
     [string],
-    _CaffeineStorageCreateCertificateResult
+    { 'ok' : null } |
+      { 'err' : string }
   >,
-  '_caffeineStorageRefillCashier' : ActorMethod<
-    [[] | [_CaffeineStorageRefillInformation]],
-    _CaffeineStorageRefillResult
+  'acceptContactInvitation' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
   >,
-  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
-  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'createCheckoutSession' : ActorMethod<
-    [Array<ShoppingItem>, string, string],
-    string
+  'acceptUsernameOffer' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
   >,
-  'generateInviteCode' : ActorMethod<[], string>,
-  'getAllRSVPs' : ActorMethod<[], Array<RSVP>>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
-  'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getInviteCodes' : ActorMethod<[], Array<InviteCode>>,
-  'getStripeSessionStatus' : ActorMethod<[string], StripeSessionStatus>,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
-  'initializeAccessControl' : ActorMethod<[], undefined>,
-  'isCallerAdmin' : ActorMethod<[], boolean>,
-  'isCallerApproved' : ActorMethod<[], boolean>,
-  'isStripeConfigured' : ActorMethod<[], boolean>,
-  'listApprovals' : ActorMethod<[], Array<UserApprovalInfo>>,
-  'reclaimAdminAccess' : ActorMethod<[], undefined>,
-  'requestApproval' : ActorMethod<[], undefined>,
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'setApproval' : ActorMethod<[Principal, ApprovalStatus], undefined>,
-  'setStripeConfiguration' : ActorMethod<[StripeConfiguration], undefined>,
-  'submitRSVP' : ActorMethod<[string, boolean, string], undefined>,
-  'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
+  'checkIsFollowing' : ActorMethod<[Principal], boolean>,
+  'createAsset' : ActorMethod<
+    [string, [] | [string], bigint, bigint, [] | [string], Array<FileRef>],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
+  'createCollection' : ActorMethod<
+    [string, [] | [string]],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
+  'declineCoSignInvitation' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'declineContactInvitation' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'deleteAsset' : ActorMethod<[string], { 'ok' : null } | { 'err' : string }>,
+  'deleteCollection' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'delistItem' : ActorMethod<[string], { 'ok' : null } | { 'err' : string }>,
+  'depositFunds' : ActorMethod<
+    [string, bigint],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'followUser' : ActorMethod<[Principal], { 'ok' : null } | { 'err' : string }>,
+  'generateDownloadPackage' : ActorMethod<
+    [string],
+    { 'ok' : DownloadManifest } |
+      { 'err' : string }
+  >,
+  'getAdminStats' : ActorMethod<[], AdminStats>,
+  'getAllDailyMetrics' : ActorMethod<[], Array<DailyMetrics>>,
+  'getAllSupportSubmissions' : ActorMethod<[], Array<SupportSubmission>>,
+  'getAllTransactions' : ActorMethod<[], Array<AuditLogEntry>>,
+  'getAllUsernameNFTs' : ActorMethod<[], Array<UsernameNFT>>,
+  'getAllUsernameOffers' : ActorMethod<[], Array<UsernameOffer>>,
+  'getAllUsers' : ActorMethod<[], Array<User>>,
+  'getAsset' : ActorMethod<[string], [] | [Asset]>,
+  'getCanisterId' : ActorMethod<[], CanisterIdResult>,
+  'getCyclesBalance' : ActorMethod<[], bigint>,
+  'getDailyMetrics' : ActorMethod<[], DailyMetrics>,
+  'getFollowers' : ActorMethod<[Principal], Array<Principal>>,
+  'getFollowing' : ActorMethod<[Principal], Array<Principal>>,
+  'getLatestActiveUsers' : ActorMethod<[bigint], Array<User>>,
+  'getListing' : ActorMethod<[string], [] | [MarketplaceListing]>,
+  'getListings' : ActorMethod<
+    [[] | [ListingFilter]],
+    Array<MarketplaceListing>
+  >,
+  'getMessages' : ActorMethod<[Principal], Array<Message>>,
+  'getMyAssets' : ActorMethod<[], Array<Asset>>,
+  'getMyCoSignInvitations' : ActorMethod<[], Array<CoSignInvitation>>,
+  'getMyCollections' : ActorMethod<[], Array<Collection>>,
+  'getMyContacts' : ActorMethod<[], Array<Principal>>,
+  'getMyProfile' : ActorMethod<[], [] | [User]>,
+  'getMySignedCopies' : ActorMethod<[], Array<SignedCopy>>,
+  'getMyTransactions' : ActorMethod<[bigint, bigint], Array<Transaction>>,
+  'getMyUsernameOffers' : ActorMethod<[], Array<UsernameOffer>>,
+  'getMyWallet' : ActorMethod<[], WalletBalance>,
+  'getPendingInvitations' : ActorMethod<[], Array<ContactInvitation>>,
+  'getPublicAssets' : ActorMethod<[Principal], Array<Asset>>,
+  'getPublicCollections' : ActorMethod<[Principal], Array<Collection>>,
+  'getPublicMarketplaceListings' : ActorMethod<[], Array<MarketplaceListing>>,
+  'getPublicProfile' : ActorMethod<[Principal], [] | [User]>,
+  'getPublicSignedCopies' : ActorMethod<[Principal], Array<SignedCopy>>,
+  'getSharedAssetsWithMe' : ActorMethod<[], Array<AssetShare>>,
+  'getSignedCopiesForAsset' : ActorMethod<[string], Array<SignedCopy>>,
+  'getSignedCopy' : ActorMethod<[string], [] | [SignedCopy]>,
+  'getSignedCopyByUrl' : ActorMethod<[string], [] | [SignedCopy]>,
+  'getUserByNumber' : ActorMethod<[bigint], [] | [User]>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [User]>,
+  'getUsernameNFT' : ActorMethod<[string], [] | [UsernameNFT]>,
+  'getWellKnownDomainVerification' : ActorMethod<[], string>,
+  'inviteCoSigner' : ActorMethod<
+    [string, Principal],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
+  'listForSale' : ActorMethod<
+    [ItemType, string, bigint, string, SaleMethod],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
+  'markMessageRead' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'mintUsernameNFT' : ActorMethod<
+    [string, Principal],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'placeBid' : ActorMethod<
+    [string, bigint],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'purchaseItem' : ActorMethod<[string], { 'ok' : null } | { 'err' : string }>,
+  'reclaimAdmin' : ActorMethod<[], { 'ok' : null } | { 'err' : string }>,
+  'registerFileReference' : ActorMethod<
+    [string, FileRef],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'registerUser' : ActorMethod<
+    [string],
+    { 'ok' : bigint } |
+      { 'err' : string }
+  >,
+  'rejectUsernameOffer' : ActorMethod<
+    [string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'revokeAssetShare' : ActorMethod<
+    [string, Principal],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'searchUsers' : ActorMethod<[SearchFilter], Array<User>>,
+  'sendContactInvitation' : ActorMethod<
+    [Principal],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'sendMessage' : ActorMethod<
+    [Principal, string],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'setCanisterId' : ActorMethod<[string], { 'ok' : null } | { 'err' : string }>,
+  'setCertificateIssuerStatus' : ActorMethod<
+    [
+      Principal,
+      boolean,
+      [] | [
+        { 'Institution' : null } |
+          { 'Celebrity' : null } |
+          { 'Government' : null }
+      ],
+    ],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'setCollectionForSale' : ActorMethod<
+    [string, boolean, bigint, string, SaleMethod],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'setSignedCopyPrivacy' : ActorMethod<
+    [string, boolean],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'setUserAdmin' : ActorMethod<
+    [Principal, boolean],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'setUsername' : ActorMethod<[string], { 'ok' : null } | { 'err' : string }>,
+  'shareAssetWithContact' : ActorMethod<
+    [string, Principal],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'signAsset' : ActorMethod<
+    [string, bigint, string],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
+  'submitSupportForm' : ActorMethod<
+    [string, string, [] | [string]],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'submitUsernameOffer' : ActorMethod<
+    [string, bigint, string],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
+  'transferUsernameNFT' : ActorMethod<
+    [string, Principal],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'unfollowUser' : ActorMethod<
+    [Principal],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'updateAsset' : ActorMethod<
+    [
+      string,
+      string,
+      [] | [string],
+      bigint,
+      bigint,
+      [] | [string],
+      boolean,
+      Array<FileRef>,
+    ],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'updateCollection' : ActorMethod<
+    [
+      string,
+      string,
+      [] | [string],
+      boolean,
+      boolean,
+      bigint,
+      string,
+      SaleMethod,
+    ],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'updateMyProfile' : ActorMethod<
+    [UpdateProfileArgs],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
+  'validateCertificate' : ActorMethod<[string], [] | [SignedCopy]>,
+  'withdrawFunds' : ActorMethod<
+    [string, bigint, [] | [string]],
+    { 'ok' : null } |
+      { 'err' : string }
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

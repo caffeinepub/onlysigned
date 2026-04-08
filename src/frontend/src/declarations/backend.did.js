@@ -8,309 +8,1283 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
-export const _CaffeineStorageCreateCertificateResult = IDL.Record({
-  'method' : IDL.Text,
-  'blob_hash' : IDL.Text,
+export const FileRef = IDL.Record({
+  'mimeType' : IDL.Text,
+  'filename' : IDL.Text,
+  'fileId' : IDL.Text,
+  'sizeBytes' : IDL.Nat,
 });
-export const _CaffeineStorageRefillInformation = IDL.Record({
-  'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+export const SignerInfo = IDL.Record({
+  'certIssuerType' : IDL.Opt(IDL.Text),
+  'principal' : IDL.Principal,
+  'signature' : IDL.Text,
+  'displayName' : IDL.Text,
+  'signedAt' : IDL.Int,
 });
-export const _CaffeineStorageRefillResult = IDL.Record({
-  'success' : IDL.Opt(IDL.Bool),
-  'topped_up_amount' : IDL.Opt(IDL.Nat),
+export const ICRC7Metadata = IDL.Record({
+  'tokenId' : IDL.Nat,
+  'assetId' : IDL.Text,
+  'signers' : IDL.Vec(SignerInfo),
+  'creatorId' : IDL.Principal,
+  'authenticityHash' : IDL.Text,
+  'certificateId' : IDL.Text,
+  'shareableUrl' : IDL.Text,
+  'sequenceNumber' : IDL.Nat,
 });
-export const UserRole = IDL.Variant({
-  'admin' : IDL.Null,
-  'user' : IDL.Null,
-  'guest' : IDL.Null,
+export const DownloadManifest = IDL.Record({
+  'tokenId' : IDL.Nat,
+  'icrc7Metadata' : ICRC7Metadata,
+  'assetId' : IDL.Text,
+  'signers' : IDL.Vec(SignerInfo),
+  'generatedAt' : IDL.Int,
+  'authenticityHash' : IDL.Text,
+  'certificateId' : IDL.Text,
+  'shareableUrl' : IDL.Text,
+  'sequenceNumber' : IDL.Nat,
+  'copyId' : IDL.Text,
 });
-export const ShoppingItem = IDL.Record({
-  'productName' : IDL.Text,
+export const AdminStats = IDL.Record({
+  'totalAssets' : IDL.Nat,
+  'totalSignedCopies' : IDL.Nat,
+  'activeUsersLast30Days' : IDL.Nat,
+  'totalUsers' : IDL.Nat,
+  'totalTransactions' : IDL.Nat,
+  'totalMarketplaceVolume' : IDL.Nat,
+});
+export const DailyMetrics = IDL.Record({
+  'date' : IDL.Text,
+  'totalTransactionVolume' : IDL.Nat,
+  'signedCopiesCreated' : IDL.Nat,
+  'salesCompleted' : IDL.Nat,
+  'newUsers' : IDL.Nat,
+  'assetsUploaded' : IDL.Nat,
+});
+export const SubmissionStatus = IDL.Variant({
+  'Reviewed' : IDL.Null,
+  'Pending' : IDL.Null,
+});
+export const SupportSubmission = IDL.Record({
+  'id' : IDL.Text,
+  'status' : SubmissionStatus,
+  'subject' : IDL.Text,
+  'submitterPrincipal' : IDL.Opt(IDL.Principal),
+  'submittedAt' : IDL.Int,
+  'email' : IDL.Opt(IDL.Text),
+  'message' : IDL.Text,
+});
+export const TxType = IDL.Variant({
+  'Bid' : IDL.Null,
+  'Deposit' : IDL.Null,
+  'Sale' : IDL.Null,
+  'Withdrawal' : IDL.Null,
+  'Royalty' : IDL.Null,
+  'OfferPayment' : IDL.Null,
+  'Purchase' : IDL.Null,
+});
+export const AuditLogEntry = IDL.Record({
+  'id' : IDL.Text,
+  'itemId' : IDL.Opt(IDL.Text),
+  'destinationAddress' : IDL.Opt(IDL.Text),
+  'toPrincipal' : IDL.Principal,
+  'fromPrincipal' : IDL.Opt(IDL.Principal),
   'currency' : IDL.Text,
-  'quantity' : IDL.Nat,
-  'priceInCents' : IDL.Nat,
-  'productDescription' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'txType' : TxType,
+  'amount' : IDL.Nat,
 });
-export const Time = IDL.Int;
-export const RSVP = IDL.Record({
-  'name' : IDL.Text,
-  'inviteCode' : IDL.Text,
-  'timestamp' : Time,
-  'attending' : IDL.Bool,
+export const TransferRecord = IDL.Record({
+  'at' : IDL.Int,
+  'to' : IDL.Principal,
+  'from' : IDL.Principal,
 });
-export const TrustedPartyType = IDL.Variant({
-  'creator' : IDL.Null,
-  'institution' : IDL.Null,
-  'celebrity' : IDL.Null,
-  'government' : IDL.Null,
+export const UsernameNFT = IDL.Record({
+  'id' : IDL.Text,
+  'username' : IDL.Text,
+  'ownerPrincipal' : IDL.Principal,
+  'transferHistory' : IDL.Vec(TransferRecord),
+  'mintedAt' : IDL.Int,
+  'mintedBy' : IDL.Principal,
 });
-export const UserProfile = IDL.Record({
+export const OfferStatus = IDL.Variant({
+  'Rejected' : IDL.Null,
+  'Accepted' : IDL.Null,
+  'Pending' : IDL.Null,
+});
+export const UsernameOffer = IDL.Record({
+  'id' : IDL.Text,
+  'status' : OfferStatus,
+  'targetUsername' : IDL.Text,
+  'nftExists' : IDL.Bool,
+  'offererPrincipal' : IDL.Principal,
+  'submittedAt' : IDL.Int,
+  'currency' : IDL.Text,
+  'amount' : IDL.Nat,
+});
+export const IssuerSubtype = IDL.Variant({
+  'Institution' : IDL.Null,
+  'Celebrity' : IDL.Null,
+  'Government' : IDL.Null,
+});
+export const ProfileType = IDL.Variant({
+  'Collector' : IDL.Null,
+  'CertificateIssuer' : IDL.Null,
+});
+export const User = IDL.Record({
+  'id' : IDL.Principal,
   'bio' : IDL.Text,
   'personalUrl' : IDL.Opt(IDL.Text),
-  'trustedPartyType' : IDL.Opt(TrustedPartyType),
-  'principal' : IDL.Principal,
-  'isCreator' : IDL.Bool,
   'username' : IDL.Opt(IDL.Text),
   'displayName' : IDL.Text,
-  'birthdate' : IDL.Opt(IDL.Int),
-  'profileImage' : IDL.Opt(IDL.Text),
+  'birthdate' : IDL.Opt(IDL.Text),
   'profilePhoto' : IDL.Opt(IDL.Text),
-  'isTrustedParty' : IDL.Bool,
+  'lastActiveTime' : IDL.Int,
   'email' : IDL.Opt(IDL.Text),
   'isVerified' : IDL.Bool,
   'userNumber' : IDL.Nat,
-  'usernameNFT' : IDL.Opt(IDL.Text),
+  'hasUsernameNFT' : IDL.Bool,
+  'certIssuerSubtype' : IDL.Opt(IssuerSubtype),
+  'followerCount' : IDL.Nat,
   'isAdmin' : IDL.Bool,
+  'followingCount' : IDL.Nat,
+  'registrationTime' : IDL.Int,
+  'profileType' : ProfileType,
 });
-export const InviteCode = IDL.Record({
-  'created' : Time,
-  'code' : IDL.Text,
-  'used' : IDL.Bool,
-});
-export const StripeSessionStatus = IDL.Variant({
-  'completed' : IDL.Record({
-    'userPrincipal' : IDL.Opt(IDL.Text),
-    'response' : IDL.Text,
-  }),
-  'failed' : IDL.Record({ 'error' : IDL.Text }),
-});
-export const ApprovalStatus = IDL.Variant({
-  'pending' : IDL.Null,
-  'approved' : IDL.Null,
-  'rejected' : IDL.Null,
-});
-export const UserApprovalInfo = IDL.Record({
-  'status' : ApprovalStatus,
-  'principal' : IDL.Principal,
-});
-export const StripeConfiguration = IDL.Record({
-  'allowedCountries' : IDL.Vec(IDL.Text),
-  'secretKey' : IDL.Text,
-});
-export const http_header = IDL.Record({
-  'value' : IDL.Text,
+export const Asset = IDL.Record({
+  'id' : IDL.Text,
+  'royaltyBps' : IDL.Nat,
+  'collectionId' : IDL.Opt(IDL.Text),
+  'ownerId' : IDL.Principal,
   'name' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'description' : IDL.Opt(IDL.Text),
+  'fileRefs' : IDL.Vec(FileRef),
+  'updatedAt' : IDL.Int,
+  'privacyPublic' : IDL.Bool,
+  'basePrice' : IDL.Nat,
 });
-export const http_request_result = IDL.Record({
-  'status' : IDL.Nat,
-  'body' : IDL.Vec(IDL.Nat8),
-  'headers' : IDL.Vec(http_header),
+export const CanisterIdResult = IDL.Record({
+  'detectionMethod' : IDL.Text,
+  'canisterId' : IDL.Text,
 });
-export const TransformationInput = IDL.Record({
-  'context' : IDL.Vec(IDL.Nat8),
-  'response' : http_request_result,
+export const SaleMethod = IDL.Variant({
+  'Auction' : IDL.Null,
+  'Direct' : IDL.Null,
 });
-export const TransformationOutput = IDL.Record({
-  'status' : IDL.Nat,
-  'body' : IDL.Vec(IDL.Nat8),
-  'headers' : IDL.Vec(http_header),
+export const ItemType = IDL.Variant({
+  'Collection' : IDL.Null,
+  'SignedCopy' : IDL.Null,
+});
+export const MarketplaceListing = IDL.Record({
+  'id' : IDL.Text,
+  'itemId' : IDL.Text,
+  'sellerPrincipal' : IDL.Principal,
+  'saleMethod' : SaleMethod,
+  'active' : IDL.Bool,
+  'highestBidder' : IDL.Opt(IDL.Principal),
+  'listedAt' : IDL.Int,
+  'highestBid' : IDL.Opt(IDL.Nat),
+  'currency' : IDL.Text,
+  'itemType' : ItemType,
+  'price' : IDL.Nat,
+});
+export const ListingFilter = IDL.Record({
+  'saleMethod' : IDL.Opt(SaleMethod),
+  'currency' : IDL.Opt(IDL.Text),
+  'itemType' : IDL.Opt(ItemType),
+});
+export const Message = IDL.Record({
+  'id' : IDL.Text,
+  'content' : IDL.Text,
+  'sentAt' : IDL.Int,
+  'toPrincipal' : IDL.Principal,
+  'fromPrincipal' : IDL.Principal,
+  'readAt' : IDL.Opt(IDL.Int),
+});
+export const CoSignInvitation = IDL.Record({
+  'id' : IDL.Text,
+  'status' : IDL.Variant({
+    'Accepted' : IDL.Null,
+    'Declined' : IDL.Null,
+    'Pending' : IDL.Null,
+  }),
+  'inviterPrincipal' : IDL.Principal,
+  'signedCopyId' : IDL.Text,
+  'inviteePrincipal' : IDL.Principal,
+  'createdAt' : IDL.Int,
+});
+export const Collection = IDL.Record({
+  'id' : IDL.Text,
+  'saleMethod' : SaleMethod,
+  'saleCurrency' : IDL.Text,
+  'ownerId' : IDL.Principal,
+  'name' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'description' : IDL.Opt(IDL.Text),
+  'privacyPublic' : IDL.Bool,
+  'salePrice' : IDL.Nat,
+  'forSale' : IDL.Bool,
+});
+export const SignedCopy = IDL.Record({
+  'id' : IDL.Text,
+  'saleMethod' : IDL.Opt(SaleMethod),
+  'tokenId' : IDL.Nat,
+  'ownerId' : IDL.Principal,
+  'assetId' : IDL.Text,
+  'signers' : IDL.Vec(SignerInfo),
+  'createdAt' : IDL.Int,
+  'creatorId' : IDL.Principal,
+  'listingPrice' : IDL.Opt(IDL.Nat),
+  'authenticityHash' : IDL.Text,
+  'certificateId' : IDL.Text,
+  'listedForSale' : IDL.Bool,
+  'privacyPublic' : IDL.Bool,
+  'currency' : IDL.Text,
+  'listingCurrency' : IDL.Opt(IDL.Text),
+  'shareableUrl' : IDL.Text,
+  'sequenceNumber' : IDL.Nat,
+  'price' : IDL.Nat,
+});
+export const Transaction = IDL.Record({
+  'id' : IDL.Text,
+  'itemId' : IDL.Opt(IDL.Text),
+  'destinationAddress' : IDL.Opt(IDL.Text),
+  'toPrincipal' : IDL.Principal,
+  'fromPrincipal' : IDL.Opt(IDL.Principal),
+  'currency' : IDL.Text,
+  'timestamp' : IDL.Int,
+  'txType' : TxType,
+  'amount' : IDL.Nat,
+});
+export const WalletBalance = IDL.Record({
+  'icp' : IDL.Nat,
+  'ckbtc' : IDL.Nat,
+  'ckusdc' : IDL.Nat,
+  'ckusdt' : IDL.Nat,
+});
+export const InvitationStatus = IDL.Variant({
+  'Accepted' : IDL.Null,
+  'Declined' : IDL.Null,
+  'Pending' : IDL.Null,
+});
+export const ContactInvitation = IDL.Record({
+  'id' : IDL.Text,
+  'status' : InvitationStatus,
+  'createdAt' : IDL.Int,
+  'toPrincipal' : IDL.Principal,
+  'fromPrincipal' : IDL.Principal,
+});
+export const AssetShare = IDL.Record({
+  'revoked' : IDL.Bool,
+  'assetId' : IDL.Text,
+  'ownerPrincipal' : IDL.Principal,
+  'sharedAt' : IDL.Int,
+  'sharedWithPrincipal' : IDL.Principal,
+});
+export const SearchFilter = IDL.Record({
+  'subtype' : IDL.Opt(IssuerSubtype),
+  'sortBy' : IDL.Variant({
+    'UserNumber' : IDL.Null,
+    'LastActive' : IDL.Null,
+    'RegistrationTime' : IDL.Null,
+    'FollowerCount' : IDL.Null,
+  }),
+  'searchText' : IDL.Text,
+  'onlyVerified' : IDL.Bool,
+  'onlyAdmin' : IDL.Bool,
+  'profileType' : IDL.Opt(ProfileType),
+  'minFollowers' : IDL.Opt(IDL.Nat),
+});
+export const UpdateProfileArgs = IDL.Record({
+  'bio' : IDL.Text,
+  'personalUrl' : IDL.Opt(IDL.Text),
+  'displayName' : IDL.Text,
+  'birthdate' : IDL.Opt(IDL.Text),
+  'profilePhoto' : IDL.Opt(IDL.Text),
+  'email' : IDL.Opt(IDL.Text),
+  'certIssuerSubtype' : IDL.Opt(IssuerSubtype),
+  'profileType' : ProfileType,
 });
 
 export const idlService = IDL.Service({
-  '_caffeineStorageBlobsToDelete' : IDL.Func(
-      [],
-      [IDL.Vec(IDL.Text)],
-      ['query'],
-    ),
-  '_caffeineStorageConfirmBlobDeletion' : IDL.Func([IDL.Vec(IDL.Text)], [], []),
-  '_caffeineStorageCreateCertificate' : IDL.Func(
+  'acceptCoSignInvitation' : IDL.Func(
       [IDL.Text],
-      [_CaffeineStorageCreateCertificateResult],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
       [],
     ),
-  '_caffeineStorageRefillCashier' : IDL.Func(
-      [IDL.Opt(_CaffeineStorageRefillInformation)],
-      [_CaffeineStorageRefillResult],
-      [],
-    ),
-  '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-  'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'createCheckoutSession' : IDL.Func(
-      [IDL.Vec(ShoppingItem), IDL.Text, IDL.Text],
+  'acceptContactInvitation' : IDL.Func(
       [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
       [],
     ),
-  'generateInviteCode' : IDL.Func([], [IDL.Text], []),
-  'getAllRSVPs' : IDL.Func([], [IDL.Vec(RSVP)], ['query']),
-  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
-  'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getInviteCodes' : IDL.Func([], [IDL.Vec(InviteCode)], ['query']),
-  'getStripeSessionStatus' : IDL.Func([IDL.Text], [StripeSessionStatus], []),
-  'getUserProfile' : IDL.Func(
+  'acceptUsernameOffer' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'checkIsFollowing' : IDL.Func([IDL.Principal], [IDL.Bool], ['query']),
+  'createAsset' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Opt(IDL.Text),
+        IDL.Nat,
+        IDL.Nat,
+        IDL.Opt(IDL.Text),
+        IDL.Vec(FileRef),
+      ],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
+  'createCollection' : IDL.Func(
+      [IDL.Text, IDL.Opt(IDL.Text)],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
+  'declineCoSignInvitation' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'declineContactInvitation' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'deleteAsset' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'deleteCollection' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'delistItem' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'depositFunds' : IDL.Func(
+      [IDL.Text, IDL.Nat],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'followUser' : IDL.Func(
       [IDL.Principal],
-      [IDL.Opt(UserProfile)],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'generateDownloadPackage' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : DownloadManifest, 'err' : IDL.Text })],
+      [],
+    ),
+  'getAdminStats' : IDL.Func([], [AdminStats], ['query']),
+  'getAllDailyMetrics' : IDL.Func([], [IDL.Vec(DailyMetrics)], ['query']),
+  'getAllSupportSubmissions' : IDL.Func(
+      [],
+      [IDL.Vec(SupportSubmission)],
       ['query'],
     ),
-  'initializeAccessControl' : IDL.Func([], [], []),
-  'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
-  'isStripeConfigured' : IDL.Func([], [IDL.Bool], ['query']),
-  'listApprovals' : IDL.Func([], [IDL.Vec(UserApprovalInfo)], ['query']),
-  'reclaimAdminAccess' : IDL.Func([], [], []),
-  'requestApproval' : IDL.Func([], [], []),
-  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
-  'setStripeConfiguration' : IDL.Func([StripeConfiguration], [], []),
-  'submitRSVP' : IDL.Func([IDL.Text, IDL.Bool, IDL.Text], [], []),
-  'transform' : IDL.Func(
-      [TransformationInput],
-      [TransformationOutput],
+  'getAllTransactions' : IDL.Func([], [IDL.Vec(AuditLogEntry)], ['query']),
+  'getAllUsernameNFTs' : IDL.Func([], [IDL.Vec(UsernameNFT)], ['query']),
+  'getAllUsernameOffers' : IDL.Func([], [IDL.Vec(UsernameOffer)], ['query']),
+  'getAllUsers' : IDL.Func([], [IDL.Vec(User)], ['query']),
+  'getAsset' : IDL.Func([IDL.Text], [IDL.Opt(Asset)], ['query']),
+  'getCanisterId' : IDL.Func([], [CanisterIdResult], []),
+  'getCyclesBalance' : IDL.Func([], [IDL.Nat], []),
+  'getDailyMetrics' : IDL.Func([], [DailyMetrics], ['query']),
+  'getFollowers' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(IDL.Principal)],
       ['query'],
+    ),
+  'getFollowing' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(IDL.Principal)],
+      ['query'],
+    ),
+  'getLatestActiveUsers' : IDL.Func([IDL.Nat], [IDL.Vec(User)], ['query']),
+  'getListing' : IDL.Func([IDL.Text], [IDL.Opt(MarketplaceListing)], ['query']),
+  'getListings' : IDL.Func(
+      [IDL.Opt(ListingFilter)],
+      [IDL.Vec(MarketplaceListing)],
+      ['query'],
+    ),
+  'getMessages' : IDL.Func([IDL.Principal], [IDL.Vec(Message)], ['query']),
+  'getMyAssets' : IDL.Func([], [IDL.Vec(Asset)], ['query']),
+  'getMyCoSignInvitations' : IDL.Func(
+      [],
+      [IDL.Vec(CoSignInvitation)],
+      ['query'],
+    ),
+  'getMyCollections' : IDL.Func([], [IDL.Vec(Collection)], ['query']),
+  'getMyContacts' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
+  'getMyProfile' : IDL.Func([], [IDL.Opt(User)], ['query']),
+  'getMySignedCopies' : IDL.Func([], [IDL.Vec(SignedCopy)], ['query']),
+  'getMyTransactions' : IDL.Func(
+      [IDL.Nat, IDL.Nat],
+      [IDL.Vec(Transaction)],
+      ['query'],
+    ),
+  'getMyUsernameOffers' : IDL.Func([], [IDL.Vec(UsernameOffer)], ['query']),
+  'getMyWallet' : IDL.Func([], [WalletBalance], ['query']),
+  'getPendingInvitations' : IDL.Func(
+      [],
+      [IDL.Vec(ContactInvitation)],
+      ['query'],
+    ),
+  'getPublicAssets' : IDL.Func([IDL.Principal], [IDL.Vec(Asset)], ['query']),
+  'getPublicCollections' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(Collection)],
+      ['query'],
+    ),
+  'getPublicMarketplaceListings' : IDL.Func(
+      [],
+      [IDL.Vec(MarketplaceListing)],
+      ['query'],
+    ),
+  'getPublicProfile' : IDL.Func([IDL.Principal], [IDL.Opt(User)], ['query']),
+  'getPublicSignedCopies' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(SignedCopy)],
+      ['query'],
+    ),
+  'getSharedAssetsWithMe' : IDL.Func([], [IDL.Vec(AssetShare)], ['query']),
+  'getSignedCopiesForAsset' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(SignedCopy)],
+      ['query'],
+    ),
+  'getSignedCopy' : IDL.Func([IDL.Text], [IDL.Opt(SignedCopy)], ['query']),
+  'getSignedCopyByUrl' : IDL.Func([IDL.Text], [IDL.Opt(SignedCopy)], ['query']),
+  'getUserByNumber' : IDL.Func([IDL.Nat], [IDL.Opt(User)], ['query']),
+  'getUserProfile' : IDL.Func([IDL.Principal], [IDL.Opt(User)], ['query']),
+  'getUsernameNFT' : IDL.Func([IDL.Text], [IDL.Opt(UsernameNFT)], ['query']),
+  'getWellKnownDomainVerification' : IDL.Func([], [IDL.Text], ['query']),
+  'inviteCoSigner' : IDL.Func(
+      [IDL.Text, IDL.Principal],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
+  'listForSale' : IDL.Func(
+      [ItemType, IDL.Text, IDL.Nat, IDL.Text, SaleMethod],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
+  'markMessageRead' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'mintUsernameNFT' : IDL.Func(
+      [IDL.Text, IDL.Principal],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'placeBid' : IDL.Func(
+      [IDL.Text, IDL.Nat],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'purchaseItem' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'reclaimAdmin' : IDL.Func(
+      [],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'registerFileReference' : IDL.Func(
+      [IDL.Text, FileRef],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'registerUser' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Nat, 'err' : IDL.Text })],
+      [],
+    ),
+  'rejectUsernameOffer' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'revokeAssetShare' : IDL.Func(
+      [IDL.Text, IDL.Principal],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'searchUsers' : IDL.Func([SearchFilter], [IDL.Vec(User)], ['query']),
+  'sendContactInvitation' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'sendMessage' : IDL.Func(
+      [IDL.Principal, IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'setCanisterId' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'setCertificateIssuerStatus' : IDL.Func(
+      [
+        IDL.Principal,
+        IDL.Bool,
+        IDL.Opt(
+          IDL.Variant({
+            'Institution' : IDL.Null,
+            'Celebrity' : IDL.Null,
+            'Government' : IDL.Null,
+          })
+        ),
+      ],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'setCollectionForSale' : IDL.Func(
+      [IDL.Text, IDL.Bool, IDL.Nat, IDL.Text, SaleMethod],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'setSignedCopyPrivacy' : IDL.Func(
+      [IDL.Text, IDL.Bool],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'setUserAdmin' : IDL.Func(
+      [IDL.Principal, IDL.Bool],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'setUsername' : IDL.Func(
+      [IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'shareAssetWithContact' : IDL.Func(
+      [IDL.Text, IDL.Principal],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'signAsset' : IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
+  'submitSupportForm' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'submitUsernameOffer' : IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
+  'transferUsernameNFT' : IDL.Func(
+      [IDL.Text, IDL.Principal],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'unfollowUser' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'updateAsset' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Opt(IDL.Text),
+        IDL.Nat,
+        IDL.Nat,
+        IDL.Opt(IDL.Text),
+        IDL.Bool,
+        IDL.Vec(FileRef),
+      ],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'updateCollection' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Opt(IDL.Text),
+        IDL.Bool,
+        IDL.Bool,
+        IDL.Nat,
+        IDL.Text,
+        SaleMethod,
+      ],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'updateMyProfile' : IDL.Func(
+      [UpdateProfileArgs],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'validateCertificate' : IDL.Func(
+      [IDL.Text],
+      [IDL.Opt(SignedCopy)],
+      ['query'],
+    ),
+  'withdrawFunds' : IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text)],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
     ),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
-  const _CaffeineStorageCreateCertificateResult = IDL.Record({
-    'method' : IDL.Text,
-    'blob_hash' : IDL.Text,
+  const FileRef = IDL.Record({
+    'mimeType' : IDL.Text,
+    'filename' : IDL.Text,
+    'fileId' : IDL.Text,
+    'sizeBytes' : IDL.Nat,
   });
-  const _CaffeineStorageRefillInformation = IDL.Record({
-    'proposed_top_up_amount' : IDL.Opt(IDL.Nat),
+  const SignerInfo = IDL.Record({
+    'certIssuerType' : IDL.Opt(IDL.Text),
+    'principal' : IDL.Principal,
+    'signature' : IDL.Text,
+    'displayName' : IDL.Text,
+    'signedAt' : IDL.Int,
   });
-  const _CaffeineStorageRefillResult = IDL.Record({
-    'success' : IDL.Opt(IDL.Bool),
-    'topped_up_amount' : IDL.Opt(IDL.Nat),
+  const ICRC7Metadata = IDL.Record({
+    'tokenId' : IDL.Nat,
+    'assetId' : IDL.Text,
+    'signers' : IDL.Vec(SignerInfo),
+    'creatorId' : IDL.Principal,
+    'authenticityHash' : IDL.Text,
+    'certificateId' : IDL.Text,
+    'shareableUrl' : IDL.Text,
+    'sequenceNumber' : IDL.Nat,
   });
-  const UserRole = IDL.Variant({
-    'admin' : IDL.Null,
-    'user' : IDL.Null,
-    'guest' : IDL.Null,
+  const DownloadManifest = IDL.Record({
+    'tokenId' : IDL.Nat,
+    'icrc7Metadata' : ICRC7Metadata,
+    'assetId' : IDL.Text,
+    'signers' : IDL.Vec(SignerInfo),
+    'generatedAt' : IDL.Int,
+    'authenticityHash' : IDL.Text,
+    'certificateId' : IDL.Text,
+    'shareableUrl' : IDL.Text,
+    'sequenceNumber' : IDL.Nat,
+    'copyId' : IDL.Text,
   });
-  const ShoppingItem = IDL.Record({
-    'productName' : IDL.Text,
+  const AdminStats = IDL.Record({
+    'totalAssets' : IDL.Nat,
+    'totalSignedCopies' : IDL.Nat,
+    'activeUsersLast30Days' : IDL.Nat,
+    'totalUsers' : IDL.Nat,
+    'totalTransactions' : IDL.Nat,
+    'totalMarketplaceVolume' : IDL.Nat,
+  });
+  const DailyMetrics = IDL.Record({
+    'date' : IDL.Text,
+    'totalTransactionVolume' : IDL.Nat,
+    'signedCopiesCreated' : IDL.Nat,
+    'salesCompleted' : IDL.Nat,
+    'newUsers' : IDL.Nat,
+    'assetsUploaded' : IDL.Nat,
+  });
+  const SubmissionStatus = IDL.Variant({
+    'Reviewed' : IDL.Null,
+    'Pending' : IDL.Null,
+  });
+  const SupportSubmission = IDL.Record({
+    'id' : IDL.Text,
+    'status' : SubmissionStatus,
+    'subject' : IDL.Text,
+    'submitterPrincipal' : IDL.Opt(IDL.Principal),
+    'submittedAt' : IDL.Int,
+    'email' : IDL.Opt(IDL.Text),
+    'message' : IDL.Text,
+  });
+  const TxType = IDL.Variant({
+    'Bid' : IDL.Null,
+    'Deposit' : IDL.Null,
+    'Sale' : IDL.Null,
+    'Withdrawal' : IDL.Null,
+    'Royalty' : IDL.Null,
+    'OfferPayment' : IDL.Null,
+    'Purchase' : IDL.Null,
+  });
+  const AuditLogEntry = IDL.Record({
+    'id' : IDL.Text,
+    'itemId' : IDL.Opt(IDL.Text),
+    'destinationAddress' : IDL.Opt(IDL.Text),
+    'toPrincipal' : IDL.Principal,
+    'fromPrincipal' : IDL.Opt(IDL.Principal),
     'currency' : IDL.Text,
-    'quantity' : IDL.Nat,
-    'priceInCents' : IDL.Nat,
-    'productDescription' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'txType' : TxType,
+    'amount' : IDL.Nat,
   });
-  const Time = IDL.Int;
-  const RSVP = IDL.Record({
-    'name' : IDL.Text,
-    'inviteCode' : IDL.Text,
-    'timestamp' : Time,
-    'attending' : IDL.Bool,
+  const TransferRecord = IDL.Record({
+    'at' : IDL.Int,
+    'to' : IDL.Principal,
+    'from' : IDL.Principal,
   });
-  const TrustedPartyType = IDL.Variant({
-    'creator' : IDL.Null,
-    'institution' : IDL.Null,
-    'celebrity' : IDL.Null,
-    'government' : IDL.Null,
+  const UsernameNFT = IDL.Record({
+    'id' : IDL.Text,
+    'username' : IDL.Text,
+    'ownerPrincipal' : IDL.Principal,
+    'transferHistory' : IDL.Vec(TransferRecord),
+    'mintedAt' : IDL.Int,
+    'mintedBy' : IDL.Principal,
   });
-  const UserProfile = IDL.Record({
+  const OfferStatus = IDL.Variant({
+    'Rejected' : IDL.Null,
+    'Accepted' : IDL.Null,
+    'Pending' : IDL.Null,
+  });
+  const UsernameOffer = IDL.Record({
+    'id' : IDL.Text,
+    'status' : OfferStatus,
+    'targetUsername' : IDL.Text,
+    'nftExists' : IDL.Bool,
+    'offererPrincipal' : IDL.Principal,
+    'submittedAt' : IDL.Int,
+    'currency' : IDL.Text,
+    'amount' : IDL.Nat,
+  });
+  const IssuerSubtype = IDL.Variant({
+    'Institution' : IDL.Null,
+    'Celebrity' : IDL.Null,
+    'Government' : IDL.Null,
+  });
+  const ProfileType = IDL.Variant({
+    'Collector' : IDL.Null,
+    'CertificateIssuer' : IDL.Null,
+  });
+  const User = IDL.Record({
+    'id' : IDL.Principal,
     'bio' : IDL.Text,
     'personalUrl' : IDL.Opt(IDL.Text),
-    'trustedPartyType' : IDL.Opt(TrustedPartyType),
-    'principal' : IDL.Principal,
-    'isCreator' : IDL.Bool,
     'username' : IDL.Opt(IDL.Text),
     'displayName' : IDL.Text,
-    'birthdate' : IDL.Opt(IDL.Int),
-    'profileImage' : IDL.Opt(IDL.Text),
+    'birthdate' : IDL.Opt(IDL.Text),
     'profilePhoto' : IDL.Opt(IDL.Text),
-    'isTrustedParty' : IDL.Bool,
+    'lastActiveTime' : IDL.Int,
     'email' : IDL.Opt(IDL.Text),
     'isVerified' : IDL.Bool,
     'userNumber' : IDL.Nat,
-    'usernameNFT' : IDL.Opt(IDL.Text),
+    'hasUsernameNFT' : IDL.Bool,
+    'certIssuerSubtype' : IDL.Opt(IssuerSubtype),
+    'followerCount' : IDL.Nat,
     'isAdmin' : IDL.Bool,
+    'followingCount' : IDL.Nat,
+    'registrationTime' : IDL.Int,
+    'profileType' : ProfileType,
   });
-  const InviteCode = IDL.Record({
-    'created' : Time,
-    'code' : IDL.Text,
-    'used' : IDL.Bool,
+  const Asset = IDL.Record({
+    'id' : IDL.Text,
+    'royaltyBps' : IDL.Nat,
+    'collectionId' : IDL.Opt(IDL.Text),
+    'ownerId' : IDL.Principal,
+    'name' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'description' : IDL.Opt(IDL.Text),
+    'fileRefs' : IDL.Vec(FileRef),
+    'updatedAt' : IDL.Int,
+    'privacyPublic' : IDL.Bool,
+    'basePrice' : IDL.Nat,
   });
-  const StripeSessionStatus = IDL.Variant({
-    'completed' : IDL.Record({
-      'userPrincipal' : IDL.Opt(IDL.Text),
-      'response' : IDL.Text,
+  const CanisterIdResult = IDL.Record({
+    'detectionMethod' : IDL.Text,
+    'canisterId' : IDL.Text,
+  });
+  const SaleMethod = IDL.Variant({ 'Auction' : IDL.Null, 'Direct' : IDL.Null });
+  const ItemType = IDL.Variant({
+    'Collection' : IDL.Null,
+    'SignedCopy' : IDL.Null,
+  });
+  const MarketplaceListing = IDL.Record({
+    'id' : IDL.Text,
+    'itemId' : IDL.Text,
+    'sellerPrincipal' : IDL.Principal,
+    'saleMethod' : SaleMethod,
+    'active' : IDL.Bool,
+    'highestBidder' : IDL.Opt(IDL.Principal),
+    'listedAt' : IDL.Int,
+    'highestBid' : IDL.Opt(IDL.Nat),
+    'currency' : IDL.Text,
+    'itemType' : ItemType,
+    'price' : IDL.Nat,
+  });
+  const ListingFilter = IDL.Record({
+    'saleMethod' : IDL.Opt(SaleMethod),
+    'currency' : IDL.Opt(IDL.Text),
+    'itemType' : IDL.Opt(ItemType),
+  });
+  const Message = IDL.Record({
+    'id' : IDL.Text,
+    'content' : IDL.Text,
+    'sentAt' : IDL.Int,
+    'toPrincipal' : IDL.Principal,
+    'fromPrincipal' : IDL.Principal,
+    'readAt' : IDL.Opt(IDL.Int),
+  });
+  const CoSignInvitation = IDL.Record({
+    'id' : IDL.Text,
+    'status' : IDL.Variant({
+      'Accepted' : IDL.Null,
+      'Declined' : IDL.Null,
+      'Pending' : IDL.Null,
     }),
-    'failed' : IDL.Record({ 'error' : IDL.Text }),
+    'inviterPrincipal' : IDL.Principal,
+    'signedCopyId' : IDL.Text,
+    'inviteePrincipal' : IDL.Principal,
+    'createdAt' : IDL.Int,
   });
-  const ApprovalStatus = IDL.Variant({
-    'pending' : IDL.Null,
-    'approved' : IDL.Null,
-    'rejected' : IDL.Null,
+  const Collection = IDL.Record({
+    'id' : IDL.Text,
+    'saleMethod' : SaleMethod,
+    'saleCurrency' : IDL.Text,
+    'ownerId' : IDL.Principal,
+    'name' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'description' : IDL.Opt(IDL.Text),
+    'privacyPublic' : IDL.Bool,
+    'salePrice' : IDL.Nat,
+    'forSale' : IDL.Bool,
   });
-  const UserApprovalInfo = IDL.Record({
-    'status' : ApprovalStatus,
-    'principal' : IDL.Principal,
+  const SignedCopy = IDL.Record({
+    'id' : IDL.Text,
+    'saleMethod' : IDL.Opt(SaleMethod),
+    'tokenId' : IDL.Nat,
+    'ownerId' : IDL.Principal,
+    'assetId' : IDL.Text,
+    'signers' : IDL.Vec(SignerInfo),
+    'createdAt' : IDL.Int,
+    'creatorId' : IDL.Principal,
+    'listingPrice' : IDL.Opt(IDL.Nat),
+    'authenticityHash' : IDL.Text,
+    'certificateId' : IDL.Text,
+    'listedForSale' : IDL.Bool,
+    'privacyPublic' : IDL.Bool,
+    'currency' : IDL.Text,
+    'listingCurrency' : IDL.Opt(IDL.Text),
+    'shareableUrl' : IDL.Text,
+    'sequenceNumber' : IDL.Nat,
+    'price' : IDL.Nat,
   });
-  const StripeConfiguration = IDL.Record({
-    'allowedCountries' : IDL.Vec(IDL.Text),
-    'secretKey' : IDL.Text,
+  const Transaction = IDL.Record({
+    'id' : IDL.Text,
+    'itemId' : IDL.Opt(IDL.Text),
+    'destinationAddress' : IDL.Opt(IDL.Text),
+    'toPrincipal' : IDL.Principal,
+    'fromPrincipal' : IDL.Opt(IDL.Principal),
+    'currency' : IDL.Text,
+    'timestamp' : IDL.Int,
+    'txType' : TxType,
+    'amount' : IDL.Nat,
   });
-  const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
-  const http_request_result = IDL.Record({
-    'status' : IDL.Nat,
-    'body' : IDL.Vec(IDL.Nat8),
-    'headers' : IDL.Vec(http_header),
+  const WalletBalance = IDL.Record({
+    'icp' : IDL.Nat,
+    'ckbtc' : IDL.Nat,
+    'ckusdc' : IDL.Nat,
+    'ckusdt' : IDL.Nat,
   });
-  const TransformationInput = IDL.Record({
-    'context' : IDL.Vec(IDL.Nat8),
-    'response' : http_request_result,
+  const InvitationStatus = IDL.Variant({
+    'Accepted' : IDL.Null,
+    'Declined' : IDL.Null,
+    'Pending' : IDL.Null,
   });
-  const TransformationOutput = IDL.Record({
-    'status' : IDL.Nat,
-    'body' : IDL.Vec(IDL.Nat8),
-    'headers' : IDL.Vec(http_header),
+  const ContactInvitation = IDL.Record({
+    'id' : IDL.Text,
+    'status' : InvitationStatus,
+    'createdAt' : IDL.Int,
+    'toPrincipal' : IDL.Principal,
+    'fromPrincipal' : IDL.Principal,
+  });
+  const AssetShare = IDL.Record({
+    'revoked' : IDL.Bool,
+    'assetId' : IDL.Text,
+    'ownerPrincipal' : IDL.Principal,
+    'sharedAt' : IDL.Int,
+    'sharedWithPrincipal' : IDL.Principal,
+  });
+  const SearchFilter = IDL.Record({
+    'subtype' : IDL.Opt(IssuerSubtype),
+    'sortBy' : IDL.Variant({
+      'UserNumber' : IDL.Null,
+      'LastActive' : IDL.Null,
+      'RegistrationTime' : IDL.Null,
+      'FollowerCount' : IDL.Null,
+    }),
+    'searchText' : IDL.Text,
+    'onlyVerified' : IDL.Bool,
+    'onlyAdmin' : IDL.Bool,
+    'profileType' : IDL.Opt(ProfileType),
+    'minFollowers' : IDL.Opt(IDL.Nat),
+  });
+  const UpdateProfileArgs = IDL.Record({
+    'bio' : IDL.Text,
+    'personalUrl' : IDL.Opt(IDL.Text),
+    'displayName' : IDL.Text,
+    'birthdate' : IDL.Opt(IDL.Text),
+    'profilePhoto' : IDL.Opt(IDL.Text),
+    'email' : IDL.Opt(IDL.Text),
+    'certIssuerSubtype' : IDL.Opt(IssuerSubtype),
+    'profileType' : ProfileType,
   });
   
   return IDL.Service({
-    '_caffeineStorageBlobsToDelete' : IDL.Func(
-        [],
-        [IDL.Vec(IDL.Text)],
-        ['query'],
-      ),
-    '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
-        [IDL.Vec(IDL.Text)],
-        [],
-        [],
-      ),
-    '_caffeineStorageCreateCertificate' : IDL.Func(
+    'acceptCoSignInvitation' : IDL.Func(
         [IDL.Text],
-        [_CaffeineStorageCreateCertificateResult],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
         [],
       ),
-    '_caffeineStorageRefillCashier' : IDL.Func(
-        [IDL.Opt(_CaffeineStorageRefillInformation)],
-        [_CaffeineStorageRefillResult],
-        [],
-      ),
-    '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
-    'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'createCheckoutSession' : IDL.Func(
-        [IDL.Vec(ShoppingItem), IDL.Text, IDL.Text],
+    'acceptContactInvitation' : IDL.Func(
         [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
         [],
       ),
-    'generateInviteCode' : IDL.Func([], [IDL.Text], []),
-    'getAllRSVPs' : IDL.Func([], [IDL.Vec(RSVP)], ['query']),
-    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
-    'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getInviteCodes' : IDL.Func([], [IDL.Vec(InviteCode)], ['query']),
-    'getStripeSessionStatus' : IDL.Func([IDL.Text], [StripeSessionStatus], []),
-    'getUserProfile' : IDL.Func(
+    'acceptUsernameOffer' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'checkIsFollowing' : IDL.Func([IDL.Principal], [IDL.Bool], ['query']),
+    'createAsset' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Opt(IDL.Text),
+          IDL.Nat,
+          IDL.Nat,
+          IDL.Opt(IDL.Text),
+          IDL.Vec(FileRef),
+        ],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
+    'createCollection' : IDL.Func(
+        [IDL.Text, IDL.Opt(IDL.Text)],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
+    'declineCoSignInvitation' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'declineContactInvitation' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'deleteAsset' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'deleteCollection' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'delistItem' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'depositFunds' : IDL.Func(
+        [IDL.Text, IDL.Nat],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'followUser' : IDL.Func(
         [IDL.Principal],
-        [IDL.Opt(UserProfile)],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'generateDownloadPackage' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : DownloadManifest, 'err' : IDL.Text })],
+        [],
+      ),
+    'getAdminStats' : IDL.Func([], [AdminStats], ['query']),
+    'getAllDailyMetrics' : IDL.Func([], [IDL.Vec(DailyMetrics)], ['query']),
+    'getAllSupportSubmissions' : IDL.Func(
+        [],
+        [IDL.Vec(SupportSubmission)],
         ['query'],
       ),
-    'initializeAccessControl' : IDL.Func([], [], []),
-    'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
-    'isStripeConfigured' : IDL.Func([], [IDL.Bool], ['query']),
-    'listApprovals' : IDL.Func([], [IDL.Vec(UserApprovalInfo)], ['query']),
-    'reclaimAdminAccess' : IDL.Func([], [], []),
-    'requestApproval' : IDL.Func([], [], []),
-    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
-    'setStripeConfiguration' : IDL.Func([StripeConfiguration], [], []),
-    'submitRSVP' : IDL.Func([IDL.Text, IDL.Bool, IDL.Text], [], []),
-    'transform' : IDL.Func(
-        [TransformationInput],
-        [TransformationOutput],
+    'getAllTransactions' : IDL.Func([], [IDL.Vec(AuditLogEntry)], ['query']),
+    'getAllUsernameNFTs' : IDL.Func([], [IDL.Vec(UsernameNFT)], ['query']),
+    'getAllUsernameOffers' : IDL.Func([], [IDL.Vec(UsernameOffer)], ['query']),
+    'getAllUsers' : IDL.Func([], [IDL.Vec(User)], ['query']),
+    'getAsset' : IDL.Func([IDL.Text], [IDL.Opt(Asset)], ['query']),
+    'getCanisterId' : IDL.Func([], [CanisterIdResult], []),
+    'getCyclesBalance' : IDL.Func([], [IDL.Nat], []),
+    'getDailyMetrics' : IDL.Func([], [DailyMetrics], ['query']),
+    'getFollowers' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(IDL.Principal)],
         ['query'],
+      ),
+    'getFollowing' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(IDL.Principal)],
+        ['query'],
+      ),
+    'getLatestActiveUsers' : IDL.Func([IDL.Nat], [IDL.Vec(User)], ['query']),
+    'getListing' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(MarketplaceListing)],
+        ['query'],
+      ),
+    'getListings' : IDL.Func(
+        [IDL.Opt(ListingFilter)],
+        [IDL.Vec(MarketplaceListing)],
+        ['query'],
+      ),
+    'getMessages' : IDL.Func([IDL.Principal], [IDL.Vec(Message)], ['query']),
+    'getMyAssets' : IDL.Func([], [IDL.Vec(Asset)], ['query']),
+    'getMyCoSignInvitations' : IDL.Func(
+        [],
+        [IDL.Vec(CoSignInvitation)],
+        ['query'],
+      ),
+    'getMyCollections' : IDL.Func([], [IDL.Vec(Collection)], ['query']),
+    'getMyContacts' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
+    'getMyProfile' : IDL.Func([], [IDL.Opt(User)], ['query']),
+    'getMySignedCopies' : IDL.Func([], [IDL.Vec(SignedCopy)], ['query']),
+    'getMyTransactions' : IDL.Func(
+        [IDL.Nat, IDL.Nat],
+        [IDL.Vec(Transaction)],
+        ['query'],
+      ),
+    'getMyUsernameOffers' : IDL.Func([], [IDL.Vec(UsernameOffer)], ['query']),
+    'getMyWallet' : IDL.Func([], [WalletBalance], ['query']),
+    'getPendingInvitations' : IDL.Func(
+        [],
+        [IDL.Vec(ContactInvitation)],
+        ['query'],
+      ),
+    'getPublicAssets' : IDL.Func([IDL.Principal], [IDL.Vec(Asset)], ['query']),
+    'getPublicCollections' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(Collection)],
+        ['query'],
+      ),
+    'getPublicMarketplaceListings' : IDL.Func(
+        [],
+        [IDL.Vec(MarketplaceListing)],
+        ['query'],
+      ),
+    'getPublicProfile' : IDL.Func([IDL.Principal], [IDL.Opt(User)], ['query']),
+    'getPublicSignedCopies' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(SignedCopy)],
+        ['query'],
+      ),
+    'getSharedAssetsWithMe' : IDL.Func([], [IDL.Vec(AssetShare)], ['query']),
+    'getSignedCopiesForAsset' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(SignedCopy)],
+        ['query'],
+      ),
+    'getSignedCopy' : IDL.Func([IDL.Text], [IDL.Opt(SignedCopy)], ['query']),
+    'getSignedCopyByUrl' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(SignedCopy)],
+        ['query'],
+      ),
+    'getUserByNumber' : IDL.Func([IDL.Nat], [IDL.Opt(User)], ['query']),
+    'getUserProfile' : IDL.Func([IDL.Principal], [IDL.Opt(User)], ['query']),
+    'getUsernameNFT' : IDL.Func([IDL.Text], [IDL.Opt(UsernameNFT)], ['query']),
+    'getWellKnownDomainVerification' : IDL.Func([], [IDL.Text], ['query']),
+    'inviteCoSigner' : IDL.Func(
+        [IDL.Text, IDL.Principal],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
+    'listForSale' : IDL.Func(
+        [ItemType, IDL.Text, IDL.Nat, IDL.Text, SaleMethod],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
+    'markMessageRead' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'mintUsernameNFT' : IDL.Func(
+        [IDL.Text, IDL.Principal],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'placeBid' : IDL.Func(
+        [IDL.Text, IDL.Nat],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'purchaseItem' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'reclaimAdmin' : IDL.Func(
+        [],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'registerFileReference' : IDL.Func(
+        [IDL.Text, FileRef],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'registerUser' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Nat, 'err' : IDL.Text })],
+        [],
+      ),
+    'rejectUsernameOffer' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'revokeAssetShare' : IDL.Func(
+        [IDL.Text, IDL.Principal],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'searchUsers' : IDL.Func([SearchFilter], [IDL.Vec(User)], ['query']),
+    'sendContactInvitation' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'sendMessage' : IDL.Func(
+        [IDL.Principal, IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'setCanisterId' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'setCertificateIssuerStatus' : IDL.Func(
+        [
+          IDL.Principal,
+          IDL.Bool,
+          IDL.Opt(
+            IDL.Variant({
+              'Institution' : IDL.Null,
+              'Celebrity' : IDL.Null,
+              'Government' : IDL.Null,
+            })
+          ),
+        ],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'setCollectionForSale' : IDL.Func(
+        [IDL.Text, IDL.Bool, IDL.Nat, IDL.Text, SaleMethod],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'setSignedCopyPrivacy' : IDL.Func(
+        [IDL.Text, IDL.Bool],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'setUserAdmin' : IDL.Func(
+        [IDL.Principal, IDL.Bool],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'setUsername' : IDL.Func(
+        [IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'shareAssetWithContact' : IDL.Func(
+        [IDL.Text, IDL.Principal],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'signAsset' : IDL.Func(
+        [IDL.Text, IDL.Nat, IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
+    'submitSupportForm' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'submitUsernameOffer' : IDL.Func(
+        [IDL.Text, IDL.Nat, IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
+    'transferUsernameNFT' : IDL.Func(
+        [IDL.Text, IDL.Principal],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'unfollowUser' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'updateAsset' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Opt(IDL.Text),
+          IDL.Nat,
+          IDL.Nat,
+          IDL.Opt(IDL.Text),
+          IDL.Bool,
+          IDL.Vec(FileRef),
+        ],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'updateCollection' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Opt(IDL.Text),
+          IDL.Bool,
+          IDL.Bool,
+          IDL.Nat,
+          IDL.Text,
+          SaleMethod,
+        ],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'updateMyProfile' : IDL.Func(
+        [UpdateProfileArgs],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'validateCertificate' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(SignedCopy)],
+        ['query'],
+      ),
+    'withdrawFunds' : IDL.Func(
+        [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text)],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
       ),
   });
 };

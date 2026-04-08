@@ -1,7 +1,7 @@
 import { HttpAgent } from "@icp-sdk/core/agent";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { FileReference } from "../backend";
+import type { FileReference } from "../backend-types";
 import { loadConfig } from "../config";
 import { useActor } from "../hooks/useActor";
 import { StorageClient } from "./StorageClient";

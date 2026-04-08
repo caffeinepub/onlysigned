@@ -1,6 +1,6 @@
 import { type HttpAgent, isV3ResponseBody } from "@dfinity/agent";
 import { IDL } from "@dfinity/candid";
-import type { FileReference, backendInterface } from "../backend";
+import type { FileReference, backendInterface } from "../backend-types";
 
 type Headers = Record<string, string>;
 
@@ -546,7 +546,7 @@ export class StorageClient {
     // Validate hash format before storing in backend
     validateHashFormat(hashString, `putFile '${hashString}' hash storage`);
 
-    await this.actor.registerFileReference(path, hashString);
+    await this.actor.registerFileReference(path, hashString as never);
     const url = await this.getDirectURL(path);
     return { path, hash: hashString, url };
   }
@@ -560,6 +560,10 @@ export class StorageClient {
       throw new Error("Path must not be empty");
     }
     const fileReference = await this.actor.getFileReference(path);
+
+    if (!fileReference) {
+      throw new Error(`File reference not found for path: ${path}`);
+    }
 
     // Validate hash format received from backend
     validateHashFormat(fileReference.hash, `getDirectURL for path '${path}'`);

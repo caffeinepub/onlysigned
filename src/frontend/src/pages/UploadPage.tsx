@@ -18,6 +18,7 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
+  Loader2,
   ShieldCheck,
   Upload,
   Users,
@@ -30,6 +31,7 @@ import type { Collection, FileRef } from "../backend-types";
 import CertificateDisplay from "../components/CertificateDisplay";
 import ConnectWall from "../components/ConnectWall";
 import PageScaffold from "../components/PageScaffold";
+import { useFileUpload } from "../hooks/useFileStorage";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useIsAdmin, useMyProfile } from "../hooks/useProfile";
 import {
@@ -62,6 +64,7 @@ function UploadContent() {
   const { data: collectionsRaw } = useMyCollections();
   const createAsset = useCreateAsset();
   const signAsset = useSignAsset();
+  const { uploadFile, isUploading } = useFileUpload();
 
   const isCertificateIssuer = profile?.profileType === "CertificateIssuer";
   const followerCount = Number(profile?.followerCount ?? 0);
@@ -79,6 +82,9 @@ function UploadContent() {
   const [royaltyPercent, setRoyaltyPercent] = useState("10");
   const [isPublic, setIsPublic] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
+    {},
+  );
 
   // Post-create state
   const [createdAssetId, setCreatedAssetId] = useState<string | null>(null);
@@ -130,14 +136,25 @@ function UploadContent() {
     const royaltyVal = Number.parseFloat(royaltyPercent || "0");
     const priceVal = Number.parseFloat(basePrice || "0");
 
-    const fileRefs: FileRef[] = files.map((f) => ({
-      filename: f.name,
-      mimeType: f.type || "application/octet-stream",
-      fileId: f.name,
-      sizeBytes: BigInt(f.size),
-    }));
-
     try {
+      // Step 1: Upload each file to blob storage and capture the returned path
+      const fileRefs: FileRef[] = [];
+      for (const f of files) {
+        // Use a unique storage path: timestamp + filename to avoid collisions
+        const storagePath = `assets/${Date.now()}-${f.name}`;
+        const { path } = await uploadFile(storagePath, f, (pct) =>
+          setUploadProgress((prev) => ({ ...prev, [f.name]: pct })),
+        );
+        fileRefs.push({
+          filename: f.name,
+          mimeType: f.type || "application/octet-stream",
+          // Use the path returned by blob storage — this is what getFileReference() needs
+          fileId: path,
+          sizeBytes: BigInt(f.size),
+        });
+      }
+
+      // Step 2: Create asset record with the correct fileIds
       const result = await createAsset.mutateAsync({
         name,
         description: description || undefined,
@@ -148,12 +165,14 @@ function UploadContent() {
       });
       const assetId = typeof result === "string" ? result : null;
       setCreatedAssetId(assetId);
+      setUploadProgress({});
       toast.success(
         "Asset created! Now sign it to mint an ICRC-7 certificate.",
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to create asset.";
       toast.error(msg);
+      setUploadProgress({});
     }
   };
 
@@ -210,7 +229,8 @@ function UploadContent() {
             collections={collections}
             errors={errors}
             onSubmit={handleSubmit}
-            isPending={createAsset.isPending}
+            isPending={createAsset.isPending || isUploading}
+            uploadProgress={uploadProgress}
           />
         ) : (
           <PostCreateFlow
@@ -253,6 +273,7 @@ interface AssetFormProps {
   errors: { name?: string; royalty?: string };
   onSubmit: () => void;
   isPending: boolean;
+  uploadProgress: Record<string, number>;
 }
 
 function AssetForm({
@@ -276,6 +297,7 @@ function AssetForm({
   errors,
   onSubmit,
   isPending,
+  uploadProgress,
 }: AssetFormProps) {
   return (
     <Card className="bg-card border-border" data-ocid="upload-asset-form">
@@ -344,30 +366,50 @@ function AssetForm({
           </button>
           {files.length > 0 && (
             <div className="space-y-1.5 mt-2">
-              {files.map((file, idx) => (
-                <div
-                  key={`${file.name}-${idx}`}
-                  className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2 text-xs border border-border/30"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                    <span className="truncate text-foreground">
-                      {file.name}
-                    </span>
-                    <span className="text-muted-foreground/60 flex-shrink-0">
-                      {(file.size / 1024).toFixed(0)} KB
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onRemoveFile(idx)}
-                    className="text-muted-foreground hover:text-destructive ml-2 flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-[24px] sm:min-w-[24px] flex items-center justify-center"
-                    aria-label={`Remove ${file.name}`}
+              {files.map((file, idx) => {
+                const pct = uploadProgress[file.name];
+                const isUploading = pct !== undefined && pct < 100;
+                return (
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className="flex flex-col gap-1 bg-muted/30 rounded-lg px-3 py-2 text-xs border border-border/30"
                   >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isUploading ? (
+                          <Loader2 className="h-3.5 w-3.5 text-accent animate-spin flex-shrink-0" />
+                        ) : (
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        )}
+                        <span className="truncate text-foreground">
+                          {file.name}
+                        </span>
+                        <span className="text-muted-foreground/60 flex-shrink-0">
+                          {(file.size / 1024).toFixed(0)} KB
+                        </span>
+                      </div>
+                      {!isUploading && (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveFile(idx)}
+                          className="text-muted-foreground hover:text-destructive ml-2 flex-shrink-0 min-h-[44px] min-w-[44px] sm:min-h-[24px] sm:min-w-[24px] flex items-center justify-center"
+                          aria-label={`Remove ${file.name}`}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {isUploading && (
+                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent rounded-full transition-all duration-300"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -456,7 +498,16 @@ function AssetForm({
           className="w-full bg-accent text-accent-foreground hover:bg-accent/80 min-h-[44px] sm:min-h-[40px]"
           data-ocid="create-asset-btn"
         >
-          {isPending ? "Creating…" : "Create Asset"}
+          {isPending ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {Object.keys(uploadProgress).length > 0
+                ? "Uploading files…"
+                : "Creating…"}
+            </span>
+          ) : (
+            "Create Asset"
+          )}
         </Button>
       </CardContent>
     </Card>
